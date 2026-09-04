@@ -15,6 +15,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{
   --bg:#EDF1F5; --surface:#FFFFFF; --surface-2:#F5F7FA; --surface-raised:#FFFFFF;
@@ -203,6 +204,12 @@ input,textarea{font-family:inherit;}
 .report-card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-lg); padding:18px; margin-bottom:14px;}
 .report-card h3{font-family:var(--font-display); font-size:17px; font-weight:600; margin:0 0 4px;}
 .report-card p{font-size:13px; color:var(--ink-soft); margin:0 0 14px; line-height:1.5;}
+.drive-status{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--ink-soft); margin-bottom:14px;}
+.drive-status .dot{width:8px; height:8px; border-radius:50%; background:var(--ink-faint); flex:none;}
+.drive-status.ok .dot{background:var(--good);}
+.drive-status.off .dot{background:var(--ink-faint);}
+.drive-configure{background:none; border:none; padding:0; color:var(--accent-ink); font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:2px;}
+.drive-progress{font-family:var(--font-mono); font-size:11.5px; color:var(--ink-faint); text-align:center; margin-top:8px;}
 
 /* ---------- bottom nav ---------- */
 .tabbar{
@@ -385,6 +392,20 @@ input,textarea{font-family:inherit;}
         Exporter les données (.xlsx)
       </button>
     </div>
+
+    <div class="report-card">
+      <h3>Sauvegarde Google Drive</h3>
+      <p>Crée (ou met à jour) un dossier pour cette visite dans votre Drive, avec les photos, les schémas et le rapport à jour. À faire quand vous retrouvez du réseau — pas besoin sur site.</p>
+      <div class="drive-status off" id="driveStatus"><span class="dot"></span><span id="driveStatusText">Google Drive non configuré</span></div>
+      <div class="btn-row">
+        <button class="btn primary" id="btnDriveSync">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7.5 15 3 8l4-6h10l4 6-4.5 7Z"/><path d="m3 8 4.5 7h9L21 8"/></svg>
+          Sauvegarder sur Drive
+        </button>
+      </div>
+      <div class="drive-progress" id="driveProgress"></div>
+      <button type="button" class="drive-configure" id="btnDriveConfigure" style="margin-top:10px;">Configurer Google Drive</button>
+    </div>
   </div>
 
   <input type="file" accept="image/*" capture="environment" id="cameraInput" style="display:none;">
@@ -549,6 +570,21 @@ input,textarea{font-family:inherit;}
   </div>
 </div>
 
+<!-- Google Drive settings sheet -->
+<div class="sheet-scrim" id="driveScrim">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Google Drive</h2>
+    <p class="hint" style="margin-bottom:14px;">Collez ici l'identifiant client (Client ID) créé sur Google Cloud Console pour cette application. C'est un identifiant public, pas un mot de passe.</p>
+    <div class="field">
+      <label>Client ID Google</label>
+      <input type="text" id="driveClientIdInput" placeholder="xxxxxxxxxxxx.apps.googleusercontent.com">
+    </div>
+    <button class="btn primary" id="btnSaveDriveClientId">Enregistrer</button>
+    <button type="button" class="drive-configure" id="btnForgetDrive" style="margin-top:14px;">Oublier ce compte Google</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -576,9 +612,10 @@ var SK_COLORS = ['#1B222C','#2458B3','#C0392B','#2E7D5B','#E0A500'];
 /* ---------- indexeddb ---------- */
 var idb, state = {
   visits:[], photos:[], equip:[], todos:[], zones:DEFAULT_ZONES.slice(), usages:DEFAULT_USAGES.slice(),
-  currentVisitId:null, lastPick:{}
+  currentVisitId:null, lastPick:{}, driveParentFolderId:null
 };
 var objectUrls = {};
+try{ state.driveParentFolderId = localStorage.getItem('gdrive_parent_folder_id') || null; }catch(e){}
 
 function openDB(){
   return new Promise(function(resolve,reject){
@@ -781,7 +818,7 @@ function openTagOverlay(blob){
   }
   draw();
   document.getElementById('savePhoto').onclick = function(){
-    var rec = { id:uid(), visitId:state.currentVisitId, blob:pendingBlob, zone:selZone, usage:selUsage, comment:document.getElementById('tagComment').value.trim(), ts:Date.now() };
+    var rec = { id:uid(), visitId:state.currentVisitId, blob:pendingBlob, zone:selZone, usage:selUsage, comment:document.getElementById('tagComment').value.trim(), ts:Date.now(), driveSynced:false };
     putRec('photos', rec).then(function(){
       state.photos.unshift(rec);
       state.lastPick[state.currentVisitId] = {zone:selZone, usage:selUsage};
@@ -858,7 +895,7 @@ function openSketchOverlay(targetNote){
   document.getElementById('saveSketch').onclick = function(){
     sketchCanvas.toBlob(function(blob){
       targetNote.sketches = targetNote.sketches || [];
-      targetNote.sketches.push(blob);
+      targetNote.sketches.push({blob:blob, driveSynced:false});
       renderSketchStrip(targetNote);
       if(targetNote._persisted) putRec('equip', targetNote);
       closeOverlay('overlaySketch');
@@ -946,9 +983,9 @@ document.getElementById('closeSketch').addEventListener('click', function(){ clo
 
 function renderSketchStrip(n){
   var wrap = document.getElementById('equipSketches'); wrap.innerHTML='';
-  (n.sketches||[]).forEach(function(blob, idx){
+  (n.sketches||[]).forEach(function(sk, idx){
     var t = document.createElement('div'); t.className='sketch-thumb';
-    var img = document.createElement('img'); img.src = URL.createObjectURL(blob); t.appendChild(img);
+    var img = document.createElement('img'); img.src = URL.createObjectURL(sk.blob); t.appendChild(img);
     var del = document.createElement('button'); del.type='button'; del.className='sk-del';
     del.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>';
     del.addEventListener('click', function(e){ e.stopPropagation(); n.sketches.splice(idx,1); renderSketchStrip(n); if(n._persisted) putRec('equip', n); });
@@ -969,7 +1006,7 @@ function renderEquip(){
   state.equip.forEach(function(n){
     var card = document.createElement('div'); card.className='card note-card'; card.style.setProperty('--c', usageColor(n.usage)||'var(--accent)');
     var tags = [n.zone, n.usage].filter(Boolean).map(function(t){return '<span class="tag-mini">'+esc(t)+'</span>';}).join('');
-    var sketches = (n.sketches||[]).map(function(blob){ return '<img src="'+URL.createObjectURL(blob)+'">'; }).join('');
+    var sketches = (n.sketches||[]).map(function(sk){ return '<img src="'+URL.createObjectURL(sk.blob)+'">'; }).join('');
     card.innerHTML =
       '<div class="note-head"><span class="note-title">'+esc(n.title||'Sans titre')+'</span><span class="note-time">'+fmtDateTime(n.ts)+'</span></div>'+
       (tags? '<div class="note-tags">'+tags+'</div>':'')+
@@ -1174,6 +1211,7 @@ function renderReport(){
   document.getElementById('repTodoDone').textContent = done+'/'+state.todos.length;
   var tile = document.getElementById('repTodoDone').closest('.stat-tile');
   tile.classList.toggle('clear', state.todos.length>0 && done===state.todos.length);
+  updateDriveStatus();
 }
 
 function buildReportHtml(){
@@ -1183,7 +1221,7 @@ function buildReportHtml(){
 
   var photoJobs = state.photos.map(function(ph){ return blobToDataURL(ph.blob).then(function(url){ return {kind:'photo', id:ph.id, url:url}; }); });
   var sketchJobs = [];
-  state.equip.forEach(function(n){ (n.sketches||[]).forEach(function(blob){ sketchJobs.push(blobToDataURL(blob).then(function(url){ return {kind:'sketch', noteId:n.id, url:url}; })); }); });
+  state.equip.forEach(function(n){ (n.sketches||[]).forEach(function(sk){ sketchJobs.push(blobToDataURL(sk.blob).then(function(url){ return {kind:'sketch', noteId:n.id, url:url}; })); }); });
 
   return Promise.all(photoJobs.concat(sketchJobs)).then(function(all){
     var byId = {}, sketchById = {};
@@ -1309,6 +1347,174 @@ document.getElementById('btnExportXlsx').addEventListener('click', function(){
   .catch(function(err){ if(err && err.code!=='declined') toast('Export impossible ('+(err&&err.code||'erreur')+')'); })
   .then(function(){ btn.disabled=false; btn.innerHTML=orig; });
 });
+
+/* ---------- google drive ---------- */
+var driveToken = null, driveTokenClient = null;
+
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+
+function driveClientId(){ return lsGet('gdrive_client_id') || ''; }
+function driveConfigured(){ return !!driveClientId(); }
+
+function ensureDriveTokenClient(){
+  if(driveTokenClient) return driveTokenClient;
+  if(!(window.google && google.accounts && google.accounts.oauth2)) return null;
+  driveTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: driveClientId(),
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    callback: function(){}
+  });
+  return driveTokenClient;
+}
+function getDriveToken(){
+  if(driveToken && driveToken.expiresAt > Date.now() + 30000) return Promise.resolve(driveToken.access_token);
+  return new Promise(function(resolve, reject){
+    var client = ensureDriveTokenClient();
+    if(!client){ reject({code:'unavailable', message:'Google Identity Services indisponible'}); return; }
+    client.callback = function(resp){
+      if(resp.error){ reject(resp); return; }
+      driveToken = { access_token: resp.access_token, expiresAt: Date.now() + (resp.expires_in||3600)*1000 };
+      resolve(driveToken.access_token);
+    };
+    client.error_callback = function(err){ reject(err||{code:'declined'}); };
+    client.requestAccessToken();
+  });
+}
+function driveApi(url, opts){
+  opts = opts || {};
+  return getDriveToken().then(function(token){
+    opts.headers = Object.assign({}, opts.headers, {Authorization: 'Bearer ' + token});
+    return fetch(url, opts);
+  }).then(function(res){
+    if(!res.ok) return res.text().then(function(t){ throw {code:'http_'+res.status, message:t}; });
+    return res;
+  });
+}
+function driveFindFolder(name, parentId){
+  var q = "mimeType='application/vnd.google-apps.folder' and name='"+name.replace(/'/g,"\\'")+"' and trashed=false" + (parentId? " and '"+parentId+"' in parents":"");
+  return driveApi('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id,name)&pageSize=1')
+    .then(function(res){ return res.json(); })
+    .then(function(data){ return (data.files && data.files[0]) ? data.files[0].id : null; });
+}
+function driveCreateFolder(name, parentId){
+  var body = {name:name, mimeType:'application/vnd.google-apps.folder'};
+  if(parentId) body.parents = [parentId];
+  return driveApi('https://www.googleapis.com/drive/v3/files', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
+    .then(function(res){ return res.json(); }).then(function(data){ return data.id; });
+}
+function driveFindOrCreateFolder(name, parentId){
+  return driveFindFolder(name, parentId).then(function(id){ return id || driveCreateFolder(name, parentId); });
+}
+function driveUploadCreate(name, blob, mimeType, parentId){
+  var metadata = {name:name, parents:[parentId]};
+  var boundary = 'carnetaudit_' + Math.random().toString(16).slice(2);
+  var body = new Blob([
+    '--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(metadata)+'\r\n',
+    '--'+boundary+'\r\nContent-Type: '+mimeType+'\r\n\r\n', blob,
+    '\r\n--'+boundary+'--'
+  ]);
+  return driveApi('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method:'POST', headers:{'Content-Type':'multipart/related; boundary='+boundary}, body:body
+  }).then(function(res){ return res.json(); }).then(function(data){ return data.id; });
+}
+function driveUpdateMedia(fileId, blob, mimeType){
+  return driveApi('https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=media', {
+    method:'PATCH', headers:{'Content-Type':mimeType}, body:blob
+  }).then(function(res){ return res.json(); }).then(function(data){ return data.id; });
+}
+
+function driveProgress(msg){ document.getElementById('driveProgress').textContent = msg; }
+function updateDriveStatus(){
+  var el = document.getElementById('driveStatus'), txt = document.getElementById('driveStatusText');
+  if(driveConfigured()){ el.className='drive-status ok'; txt.textContent='Google Drive configuré'; }
+  else { el.className='drive-status off'; txt.textContent='Google Drive non configuré'; }
+}
+
+function syncVisitToDrive(){
+  var v = currentVisit();
+  if(!v){ toast('Créez une visite d’abord'); return; }
+  if(!driveConfigured()){ openDriveSheet(); return; }
+  var btn = document.getElementById('btnDriveSync'); btn.disabled = true;
+  driveProgress('Connexion à Google…');
+  var folderId;
+  getDriveToken().then(function(){
+    driveProgress('Préparation du dossier…');
+    return state.driveParentFolderId ? state.driveParentFolderId : driveFindOrCreateFolder("Carnet d'Audit", null).then(function(id){ lsSet('gdrive_parent_folder_id', id); state.driveParentFolderId = id; return id; });
+  }).then(function(parentId){
+    if(v.driveFolderId) return v.driveFolderId;
+    return driveFindOrCreateFolder(v.site+' — '+v.date, parentId).then(function(id){ v.driveFolderId = id; return putRec('visits', v).then(function(){ return id; }); });
+  }).then(function(fid){
+    folderId = fid;
+    var toPhotos = state.photos.filter(function(p){ return !p.driveSynced; });
+    var toSketches = [];
+    state.equip.forEach(function(n){ (n.sketches||[]).forEach(function(sk, idx){ if(!sk.driveSynced) toSketches.push({note:n, sk:sk, idx:idx}); }); });
+    var total = toPhotos.length + toSketches.length, done = 0;
+    function step(label){ done++; driveProgress(label+' ('+done+'/'+total+')'); }
+    var chain = Promise.resolve();
+    toPhotos.forEach(function(ph, i){
+      chain = chain.then(function(){
+        var name = String(i+1).padStart(3,'0')+'_'+slug(ph.zone||'zone')+'_'+slug(ph.usage||'usage')+'_'+fmtTime(ph.ts).replace(':','h')+'.jpg';
+        return driveUploadCreate(name, ph.blob, 'image/jpeg', folderId).then(function(){ ph.driveSynced = true; return putRec('photos', ph); }).then(function(){ step('Photos'); });
+      });
+    });
+    toSketches.forEach(function(item){
+      chain = chain.then(function(){
+        var name = 'schema_'+slug(item.note.title||'note')+'_'+(item.idx+1)+'.png';
+        return driveUploadCreate(name, item.sk.blob, 'image/png', folderId).then(function(){ item.sk.driveSynced = true; return putRec('equip', item.note); }).then(function(){ step('Schémas'); });
+      });
+    });
+    return chain;
+  }).then(function(){
+    driveProgress('Mise à jour du rapport…');
+    return buildReportHtml();
+  }).then(function(html){
+    var blob = new Blob([html], {type:'text/html'});
+    return v.driveReportFileId
+      ? driveUpdateMedia(v.driveReportFileId, blob, 'text/html')
+      : driveUploadCreate('rapport_'+slug(v.site)+'.html', blob, 'text/html', folderId).then(function(id){ v.driveReportFileId = id; });
+  }).then(function(){
+    var out = buildWorkbook();
+    var blob = new Blob([out], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    return v.driveWorkbookFileId
+      ? driveUpdateMedia(v.driveWorkbookFileId, blob, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      : driveUploadCreate('donnees_'+slug(v.site)+'.xlsx', blob, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', folderId).then(function(id){ v.driveWorkbookFileId = id; });
+  }).then(function(){
+    return putRec('visits', v);
+  }).then(function(){
+    driveProgress(''); toast('Sauvegardé sur Drive ✓');
+  }).catch(function(err){
+    driveProgress('');
+    var code = err && err.code;
+    if(code==='unavailable') toast('Google Drive indisponible ici — utilisez la version hébergée');
+    else if(code==='declined' || code==='popup_closed') toast('Connexion Google annulée');
+    else toast('Échec Drive ('+(code||'erreur')+')');
+    console.error(err);
+  }).then(function(){ btn.disabled = false; });
+}
+
+function openDriveSheet(){
+  document.getElementById('driveClientIdInput').value = driveClientId();
+  document.getElementById('driveScrim').classList.add('active');
+}
+function closeDriveSheet(){ document.getElementById('driveScrim').classList.remove('active'); }
+document.getElementById('btnDriveConfigure').addEventListener('click', openDriveSheet);
+document.getElementById('driveScrim').addEventListener('click', function(e){ if(e.target.id==='driveScrim') closeDriveSheet(); });
+document.getElementById('btnSaveDriveClientId').addEventListener('click', function(){
+  var v = document.getElementById('driveClientIdInput').value.trim();
+  if(!v){ toast('Collez un Client ID'); return; }
+  lsSet('gdrive_client_id', v);
+  driveTokenClient = null; driveToken = null;
+  closeDriveSheet(); updateDriveStatus(); toast('Client ID enregistré ✓');
+});
+document.getElementById('btnForgetDrive').addEventListener('click', function(){
+  lsDel('gdrive_client_id'); lsDel('gdrive_parent_folder_id');
+  state.driveParentFolderId = null; driveTokenClient = null; driveToken = null;
+  document.getElementById('driveClientIdInput').value = '';
+  updateDriveStatus(); toast('Configuration Drive oubliée');
+});
+document.getElementById('btnDriveSync').addEventListener('click', syncVisitToDrive);
 
 /* ---------- service worker ---------- */
 if('serviceWorker' in navigator){
