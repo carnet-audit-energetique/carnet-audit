@@ -79,6 +79,28 @@ input,textarea{font-family:inherit;}
 .visit-pill .vp-site{font-weight:600; font-size:13.5px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px;}
 .visit-pill .vp-date{font-family:var(--font-mono); font-size:10.5px; color:var(--ink-soft); letter-spacing:.02em;}
 .visit-pill svg{width:14px; height:14px; flex:none; color:var(--ink-faint);}
+.topbar-right{display:flex; align-items:center; gap:8px; min-width:0;}
+.help-btn{
+  flex:none; width:34px; height:34px; border-radius:50%; background:var(--surface); border:1px solid var(--line-strong);
+  color:var(--ink-soft); font-family:var(--font-display); font-weight:700; font-size:16px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; box-shadow:0 1px 2px var(--shadow);
+}
+
+/* ---------- help overlay ---------- */
+.help-lead{font-size:13.5px; color:var(--ink-soft); line-height:1.6; margin:0 0 20px;}
+.help-steps{margin:10px 0 0; padding:0; list-style:none; counter-reset:help-step;}
+.help-steps li{counter-increment:help-step; display:flex; gap:12px; margin-bottom:14px; font-size:13.5px; line-height:1.55; color:var(--ink);}
+.help-steps li:last-child{margin-bottom:0;}
+.help-steps li::before{content:counter(help-step); flex:none; width:22px; height:22px; border-radius:50%; background:var(--accent-soft); color:var(--accent-ink); font-family:var(--font-mono); font-size:11.5px; font-weight:600; display:flex; align-items:center; justify-content:center; margin-top:1px;}
+.help-steps li>span{flex:1; min-width:0;}
+.help-track{border:1px solid var(--line); border-radius:var(--radius-md); padding:16px; margin-bottom:16px; background:var(--surface);}
+.help-track.admin{border-color:var(--accent); background:color-mix(in srgb, var(--accent) 6%, var(--surface));}
+.help-track h4{font-family:var(--font-display); font-size:15px; font-weight:600; margin:0 0 4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.help-tag{font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; padding:2px 8px; border-radius:999px; background:var(--surface-2); color:var(--ink-soft); border:1px solid var(--line);}
+.help-track.admin .help-tag{background:var(--accent-soft); color:var(--accent-ink); border-color:var(--accent);}
+.help-note{display:flex; gap:10px; background:var(--good-soft); border:1px solid var(--good); border-radius:var(--radius-sm); padding:12px 14px; font-size:12.5px; line-height:1.55; color:var(--ink); margin-top:14px;}
+.help-note svg{width:16px; height:16px; flex:none; color:var(--good); margin-top:1px;}
+#overlayHelp code{font-family:var(--font-mono); font-size:12px; background:var(--surface-2); padding:1px 6px; border-radius:5px; border:1px solid var(--line); white-space:nowrap;}
 
 /* ---------- views ---------- */
 .view{display:none; flex:1; padding:16px 16px 132px; animation:fade .18s ease;}
@@ -321,12 +343,15 @@ input,textarea{font-family:inherit;}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21V10l5 3V9l5 3V4l5 4v13H3Z" stroke-linejoin="round"/><path d="M3 21h18"/></svg>
       Carnet
     </div>
-    <div class="visit-pill" id="visitPill">
-      <div class="vp-text">
-        <span class="vp-site" id="vpSite">—</span>
-        <span class="vp-date" id="vpDate">—</span>
+    <div class="topbar-right">
+      <div class="visit-pill" id="visitPill">
+        <div class="vp-text">
+          <span class="vp-site" id="vpSite">—</span>
+          <span class="vp-date" id="vpDate">—</span>
+        </div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
       </div>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      <button type="button" class="help-btn" id="btnHelp" aria-label="Aide">?</button>
     </div>
   </div>
 
@@ -440,6 +465,64 @@ input,textarea{font-family:inherit;}
         <span>Rapport</span>
       </button>
     </div>
+  </div>
+</div>
+
+<!-- Help / user guide overlay -->
+<div class="overlay" id="overlayHelp">
+  <div class="overlay-header">
+    <h2>Aide &amp; notice</h2>
+    <div class="overlay-close" id="closeHelp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></div>
+  </div>
+  <div class="overlay-body">
+    <p class="help-lead">Guide de prise en main de Carnet d'Audit, et procédure pour connecter Google Drive.</p>
+
+    <div class="section-title" style="margin-top:0;">Prise en main</div>
+    <ol class="help-steps">
+      <li><span><strong>Visite</strong> — tapotez la pastille en haut pour créer ou changer de visite (site, date, auditeur). Photos et notes sont toujours rattachées à la visite active.</span></li>
+      <li><span><strong>Photo</strong> — bouton central de la barre du bas : ouvre l'appareil photo natif de votre téléphone. Classez ensuite par usage, commentaire et zone.</span></li>
+      <li><span><strong>Notes</strong> — onglet Notes : fiches équipement (avec schémas annotables et notes vocales), ou pense-bête à cocher au fur et à mesure.</span></li>
+      <li><span><strong>Rapport</strong> — onglet Rapport : générez le rapport photo (HTML) et le fichier de données (Excel), ou sauvegardez sur Google Drive.</span></li>
+    </ol>
+
+    <div class="section-title">Connecter Google Drive</div>
+    <p class="help-lead" style="margin-bottom:14px;">Chaque personne garde ses photos dans <strong>son propre</strong> Drive — cette configuration établit seulement une autorisation technique, elle ne partage aucun fichier entre collègues. Deux façons d'y arriver, à choisir librement — aucune des deux n'est réservée à une personne en particulier.</p>
+
+    <div class="help-track">
+      <h4>Client ID partagé <span class="help-tag">le plus rapide</span></h4>
+      <p class="help-lead" style="margin-bottom:10px;">Vous réutilisez un Client ID déjà créé par quelqu'un de l'équipe — pratique, mais cette personne doit vous ajouter comme <em>utilisateur test</em> avant que ça fonctionne pour vous.</p>
+      <ol class="help-steps">
+        <li><span>Demandez à la personne qui a créé ce Client ID deux choses : qu'elle vous ajoute comme <em>utilisateur test</em> (votre adresse Google), et qu'elle vous communique le <strong>Client ID</strong>.</span></li>
+        <li><span>Dans l'app, onglet <strong>Rapport → Configurer Google Drive</strong>.</span></li>
+        <li><span>Collez le Client ID reçu → <strong>Enregistrer</strong>.</span></li>
+        <li><span>Tapotez <strong>Sauvegarder sur Drive</strong> → une fenêtre Google s'ouvre → connectez-vous avec <strong>votre propre compte Google</strong> et autorisez l'accès.</span></li>
+      </ol>
+      <div class="help-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.5-1.5 8-5 8-10V5l-8-3-8 3v7c0 5 2.5 8.5 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+        Rien d'autre à configurer — pas besoin de créer un compte Google Cloud.
+      </div>
+    </div>
+
+    <div class="help-track admin">
+      <h4>Votre propre accès <span class="help-tag">100% autonome</span></h4>
+      <p class="help-lead" style="margin-bottom:10px;">Vous ne dépendez de personne : vous créez votre propre Client ID, avec votre propre compte Google. N'importe qui peut suivre ce parcours, pas seulement un administrateur désigné. À faire une fois, sur <code>console.cloud.google.com</code> :</p>
+      <ol class="help-steps">
+        <li><span>Créez un projet (menu du haut → New Project).</span></li>
+        <li><span><strong>API et services → Bibliothèque</strong> → cherchez <code>Google Drive API</code> → Activer.</span></li>
+        <li><span><strong>Audience</strong> → type d'utilisateur <code>Externe</code> → dans "Utilisateurs tests", ajoutez <strong>votre propre adresse</strong> Google.</span></li>
+        <li><span><strong>Branding</strong> → renseignez le nom de l'app et l'e-mail d'assistance ; sous "Domaines autorisés", ajoutez le nom d'hôte du site (ex. <code>votre-pseudo.github.io</code> — sans <code>https://</code> ni chemin).</span></li>
+        <li><span><strong>Accès aux données</strong> → ajoutez le champ d'application <code>drive.file</code>.</span></li>
+        <li><span><strong>Clients → Créer un client OAuth</strong> → type <em>Application Web</em> → dans "Origines JavaScript autorisées", ajoutez l'URL complète du site (ex. <code>https://votre-pseudo.github.io</code>).</span></li>
+        <li><span>Copiez le <strong>Client ID</strong> généré (se termine par <code>.apps.googleusercontent.com</code>) → collez-le dans l'app, onglet <strong>Rapport → Configurer Google Drive</strong>.</span></li>
+      </ol>
+      <div class="help-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.5-1.5 8-5 8-10V5l-8-3-8 3v7c0 5 2.5 8.5 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+        Cette configuration est propre à vous — elle n'affecte et ne dépend de personne d'autre dans l'équipe.
+      </div>
+    </div>
+
+    <div class="section-title">Vos données restent locales</div>
+    <p class="help-lead">Photos, notes et schémas sont stockés uniquement sur l'appareil qui les a créés — aucun serveur ne les reçoit — sauf action volontaire d'export ou de sauvegarde sur Drive. Pensez à exporter ou synchroniser en fin de visite.</p>
   </div>
 </div>
 
@@ -882,6 +965,9 @@ document.getElementById('closeDetail').addEventListener('click', function(){ clo
 /* ---------- overlays generic ---------- */
 function openOverlay(id){ document.getElementById(id).classList.add('active'); }
 function closeOverlay(id){ document.getElementById(id).classList.remove('active'); }
+
+document.getElementById('btnHelp').addEventListener('click', function(){ openOverlay('overlayHelp'); });
+document.getElementById('closeHelp').addEventListener('click', function(){ closeOverlay('overlayHelp'); });
 
 /* ---------- sketch tool ---------- */
 var sketchCtx = null, sketchCanvas = null, sketchState = null;
