@@ -263,16 +263,6 @@ input,textarea{font-family:inherit;}
 .voice-chip audio{flex:1; height:32px; min-width:0;}
 #btnRecordVoice.recording{background:var(--danger-soft); color:var(--danger); border-color:var(--danger);}
 
-/* ---------- live camera ---------- */
-#overlayCamera{background:#000;}
-.camera-wrap{flex:1; position:relative; overflow:hidden; background:#000;}
-.camera-wrap video{width:100%; height:100%; object-fit:cover; display:block;}
-.camera-close{position:absolute; top:calc(14px + env(safe-area-inset-top)); left:14px; width:38px; height:38px; border-radius:50%; background:rgba(0,0,0,.5); color:#fff; display:flex; align-items:center; justify-content:center;}
-.camera-close svg{width:16px; height:16px;}
-.camera-controls{display:flex; align-items:center; justify-content:space-between; padding:18px 28px calc(18px + env(safe-area-inset-bottom)); background:#000;}
-.shutter{width:68px; height:68px; border-radius:50%; background:#fff; border:4px solid rgba(255,255,255,.4); cursor:pointer; padding:0; flex:none;}
-.shutter:active{transform:scale(.92);}
-
 .bg-strip{display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; margin-bottom:14px;}
 .bg-opt{flex:none; width:56px; height:56px; border-radius:var(--radius-sm); border:2px solid var(--line); overflow:hidden; cursor:pointer; background:var(--surface-2); display:flex; align-items:center; justify-content:center; color:var(--ink-faint); padding:0;}
 .bg-opt.selected{border-color:var(--accent);}
@@ -450,19 +440,6 @@ input,textarea{font-family:inherit;}
         <span>Rapport</span>
       </button>
     </div>
-  </div>
-</div>
-
-<!-- Live camera overlay -->
-<div class="overlay" id="overlayCamera">
-  <div class="camera-wrap">
-    <video id="cameraVideo" autoplay playsinline muted></video>
-    <div class="camera-close" id="closeCameraOverlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></div>
-  </div>
-  <div class="camera-controls">
-    <div style="width:44px;"></div>
-    <button type="button" class="shutter" id="btnShutter" aria-label="Prendre la photo"></button>
-    <div style="width:44px;"></div>
   </div>
 </div>
 
@@ -872,8 +849,7 @@ document.getElementById('commentToggle').addEventListener('click', function(){
 });
 document.getElementById('retakePhoto').addEventListener('click', function(){
   closeOverlay('overlayTag');
-  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){ openCameraOverlay(); }
-  else { document.getElementById('cameraInput').click(); }
+  document.getElementById('cameraInput').click();
 });
 document.getElementById('closeTag').addEventListener('click', function(){ closeOverlay('overlayTag'); renderHome(); });
 
@@ -1236,41 +1212,9 @@ document.querySelectorAll('[data-jump]').forEach(function(el){
 });
 
 /* ---------- camera ---------- */
-var cameraStream = null;
-function openCameraOverlay(){
-  openOverlay('overlayCamera');
-  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1920}}, audio:false})
-    .then(function(stream){
-      cameraStream = stream;
-      document.getElementById('cameraVideo').srcObject = stream;
-    })
-    .catch(function(){
-      closeOverlay('overlayCamera');
-      document.getElementById('cameraInput').click();
-    });
-}
-function stopCameraStream(){
-  if(cameraStream){ cameraStream.getTracks().forEach(function(t){ t.stop(); }); cameraStream = null; }
-}
-function closeCameraOverlay(){ stopCameraStream(); closeOverlay('overlayCamera'); }
-document.getElementById('closeCameraOverlay').addEventListener('click', closeCameraOverlay);
-document.getElementById('btnShutter').addEventListener('click', function(){
-  var v = document.getElementById('cameraVideo');
-  var maxDim = 1920, vw = v.videoWidth||1280, vh = v.videoHeight||960;
-  var scale = Math.min(1, maxDim/Math.max(vw,vh));
-  var w = Math.round(vw*scale), h = Math.round(vh*scale);
-  var canvas = document.createElement('canvas'); canvas.width=w; canvas.height=h;
-  canvas.getContext('2d').drawImage(v,0,0,w,h);
-  canvas.toBlob(function(blob){
-    closeCameraOverlay();
-    openTagOverlay(blob);
-  }, 'image/jpeg', 0.72);
-});
-
 document.getElementById('fabCamera').addEventListener('click', function(){
   if(!state.currentVisitId){ openVisitSheet(); return; }
-  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){ openCameraOverlay(); }
-  else { document.getElementById('cameraInput').click(); }
+  document.getElementById('cameraInput').click();
 });
 document.getElementById('cameraInput').addEventListener('change', function(e){
   var file = e.target.files[0]; e.target.value='';
