@@ -624,7 +624,7 @@ var SK_COLORS = ['#1B222C','#2458B3','#C0392B','#2E7D5B','#E0A500'];
 /* ---------- indexeddb ---------- */
 var idb, state = {
   visits:[], photos:[], equip:[], todos:[], zones:DEFAULT_ZONES.slice(), usages:DEFAULT_USAGES.slice(),
-  currentVisitId:null, lastPick:{}, driveParentFolderId:null
+  currentVisitId:null, driveParentFolderId:null
 };
 var objectUrls = {};
 try{ state.driveParentFolderId = localStorage.getItem('gdrive_parent_folder_id') || null; }catch(e){}
@@ -682,11 +682,11 @@ function toast(msg){
 /* ---------- meta / bootstrap ---------- */
 function loadMeta(){
   return getRec('meta','app').then(function(m){
-    if(m){ state.zones = m.zones||DEFAULT_ZONES.slice(); state.usages = m.usages||DEFAULT_USAGES.slice(); state.currentVisitId = m.currentVisitId||null; state.lastPick = m.lastPick||{}; }
+    if(m){ state.zones = m.zones||DEFAULT_ZONES.slice(); state.usages = m.usages||DEFAULT_USAGES.slice(); state.currentVisitId = m.currentVisitId||null; }
   });
 }
 function saveMeta(){
-  return putRec('meta', {key:'app', zones:state.zones, usages:state.usages, currentVisitId:state.currentVisitId, lastPick:state.lastPick});
+  return putRec('meta', {key:'app', zones:state.zones, usages:state.usages, currentVisitId:state.currentVisitId});
 }
 
 function loadVisitData(){
@@ -816,8 +816,7 @@ function openTagOverlay(blob){
   document.getElementById('tagPreviewImg').src = URL.createObjectURL(blob);
   document.getElementById('tagComment').value='';
   document.getElementById('commentField').style.display='none';
-  var last = state.lastPick[state.currentVisitId] || {};
-  var selZone = last.zone || null, selUsage = last.usage || null;
+  var selZone = null, selUsage = null;
   function draw(){
     renderChipRow(document.getElementById('tagZones'), state.zones, selZone, {
       onSelect:function(v){ selZone=v; draw(); },
@@ -833,8 +832,6 @@ function openTagOverlay(blob){
     var rec = { id:uid(), visitId:state.currentVisitId, blob:pendingBlob, zone:selZone, usage:selUsage, comment:document.getElementById('tagComment').value.trim(), ts:Date.now(), driveSynced:false };
     putRec('photos', rec).then(function(){
       state.photos.unshift(rec);
-      state.lastPick[state.currentVisitId] = {zone:selZone, usage:selUsage};
-      saveMeta();
       closeOverlay('overlayTag');
       renderHome();
       toast('Photo enregistrée ✓');
