@@ -1671,6 +1671,15 @@ function driveCreateFolder(name, parentId){
 function driveFindOrCreateFolder(name, parentId){
   return driveFindFolder(name, parentId).then(function(id){ return id || driveCreateFolder(name, parentId); });
 }
+function driveZoneFolderId(v, zone, visitFolderId){
+  v.driveZoneFolders = v.driveZoneFolders || {};
+  var key = zone || 'Sans zone';
+  if(v.driveZoneFolders[key]) return Promise.resolve(v.driveZoneFolders[key]);
+  return driveFindOrCreateFolder(key, visitFolderId).then(function(id){
+    v.driveZoneFolders[key] = id;
+    return putRec('visits', v).then(function(){ return id; });
+  });
+}
 function driveUploadCreate(name, blob, mimeType, parentId){
   var metadata = {name:name, parents:[parentId]};
   var boundary = 'carnetaudit_' + Math.random().toString(16).slice(2);
@@ -1735,8 +1744,10 @@ function syncVisitToDrive(){
     var chain = Promise.resolve();
     toPhotos.forEach(function(ph, i){
       chain = chain.then(function(){
-        var name = String(i+1).padStart(3,'0')+'_'+slug(ph.zone||'zone')+'_'+slug(ph.usage||'usage')+'_'+fmtTime(ph.ts).replace(':','h')+'.jpg';
-        return driveUploadCreate(name, ph.blob, 'image/jpeg', folderId).then(function(){ ph.driveSynced = true; return putRec('photos', ph); }).then(function(){ step('Photos'); });
+        return driveZoneFolderId(v, ph.zone, folderId);
+      }).then(function(zoneFolderId){
+        var name = String(i+1).padStart(3,'0')+'_'+slug(ph.usage||'usage')+'_'+fmtTime(ph.ts).replace(':','h')+'.jpg';
+        return driveUploadCreate(name, ph.blob, 'image/jpeg', zoneFolderId).then(function(){ ph.driveSynced = true; return putRec('photos', ph); }).then(function(){ step('Photos'); });
       });
     });
     toSketches.forEach(function(item){
