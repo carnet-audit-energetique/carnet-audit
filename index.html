@@ -1671,11 +1671,15 @@ function driveCreateFolder(name, parentId){
 function driveFindOrCreateFolder(name, parentId){
   return driveFindFolder(name, parentId).then(function(id){ return id || driveCreateFolder(name, parentId); });
 }
+function driveEnsureFolder(cachedId, name, parentId){
+  var check = cachedId ? driveEntryValid(cachedId, parentId) : Promise.resolve(false);
+  return check.then(function(usable){ return usable ? cachedId : driveFindOrCreateFolder(name, parentId); });
+}
 function driveZoneFolderId(v, zone, visitFolderId){
   v.driveZoneFolders = v.driveZoneFolders || {};
   var key = zone || 'Sans zone';
-  if(v.driveZoneFolders[key]) return Promise.resolve(v.driveZoneFolders[key]);
-  return driveFindOrCreateFolder(key, visitFolderId).then(function(id){
+  return driveEnsureFolder(v.driveZoneFolders[key], key, visitFolderId).then(function(id){
+    if(id === v.driveZoneFolders[key]) return id;
     v.driveZoneFolders[key] = id;
     return putRec('visits', v).then(function(){ return id; });
   });
@@ -1697,14 +1701,18 @@ function driveUpdateMedia(fileId, blob, mimeType){
     method:'PATCH', headers:{'Content-Type':mimeType}, body:blob
   }).then(function(res){ return res.json(); }).then(function(data){ return data.id; });
 }
-function driveIsUsable(fileId){
-  return driveApi('https://www.googleapis.com/drive/v3/files/'+fileId+'?fields=id,trashed')
+function driveEntryValid(id, expectedParentId){
+  return driveApi('https://www.googleapis.com/drive/v3/files/'+id+'?fields=id,trashed,parents')
     .then(function(res){ return res.json(); })
-    .then(function(data){ return !data.trashed; })
+    .then(function(data){
+      if(data.trashed) return false;
+      if(expectedParentId && (data.parents||[]).indexOf(expectedParentId)===-1) return false;
+      return true;
+    })
     .catch(function(err){ if(err && err.code==='http_404') return false; throw err; });
 }
 function driveUpsertFile(existingId, name, blob, mimeType, folderId){
-  var check = existingId ? driveIsUsable(existingId) : Promise.resolve(false);
+  var check = existingId ? driveEntryValid(existingId, folderId) : Promise.resolve(false);
   return check.then(function(usable){
     if(existingId && usable) return driveUpdateMedia(existingId, blob, mimeType);
     return driveUploadCreate(name, blob, mimeType, folderId);
@@ -1727,10 +1735,15 @@ function syncVisitToDrive(){
   var folderId;
   getDriveToken().then(function(){
     driveProgress('Préparation du dossier…');
-    return state.driveParentFolderId ? state.driveParentFolderId : driveFindOrCreateFolder("Carnet d'Audit", null).then(function(id){ lsSet('gdrive_parent_folder_id', id); state.driveParentFolderId = id; return id; });
+    return driveEnsureFolder(state.driveParentFolderId, "Carnet d'Audit", null).then(function(id){
+      if(id === state.driveParentFolderId) return id;
+      lsSet('gdrive_parent_folder_id', id); state.driveParentFolderId = id; return id;
+    });
   }).then(function(parentId){
-    if(v.driveFolderId) return v.driveFolderId;
-    return driveFindOrCreateFolder(v.site+' — '+v.date, parentId).then(function(id){ v.driveFolderId = id; return putRec('visits', v).then(function(){ return id; }); });
+    return driveEnsureFolder(v.driveFolderId, v.site+' — '+v.date, parentId).then(function(id){
+      if(id === v.driveFolderId) return id;
+      v.driveFolderId = id; return putRec('visits', v).then(function(){ return id; });
+    });
   }).then(function(fid){
     folderId = fid;
     var toPhotos = state.photos.filter(function(p){ return !p.driveSynced; });
