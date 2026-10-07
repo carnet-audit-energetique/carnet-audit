@@ -430,7 +430,7 @@ input,textarea{font-family:inherit;}
 
     <div class="report-card">
       <h3>Rapport photos</h3>
-      <p>Document HTML consultable dans n'importe quel navigateur : photos et schémas classés par zone, tags et commentaires. Idéal pour l'envoi par e-mail.</p>
+      <p>Document HTML consultable dans n'importe quel navigateur : photos et schémas classés par zone, avec tags et commentaires. Filtrable par zone et par usage, photos agrandissables au clic. Idéal pour l'envoi par e-mail.</p>
       <button class="btn primary" id="btnExportHtml">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
         Générer le rapport (.html)
@@ -865,6 +865,7 @@ function promptAddChip(container, items, selected, opts){
   input.addEventListener('keydown', function(e){ if(e.key==='Enter') commit(); });
 }
 function esc(s){ var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function escAttr(s){ return esc(s).replace(/"/g,'&quot;'); }
 
 /* ---------- ACCUEIL / gallery ---------- */
 var galleryFilterZone = null, galleryFilterUsage = null;
@@ -1492,16 +1493,20 @@ function buildReportHtml(){
     var zoneSections = Object.keys(zones).sort().map(function(z){
       var cards = zones[z].map(function(ph){
         var color = usageColor(ph.usage) || '#8993A1';
-        return '<div class="p-card"><img src="'+byId[ph.id]+'"><div class="p-body"><div class="p-tag" style="--c:'+color+'">'+esc(ph.usage||'—')+'</div>'+
+        var usage = ph.usage || 'Sans usage';
+        return '<div class="p-card" data-z="'+escAttr(z)+'" data-u="'+escAttr(usage)+'" data-c="'+color+'">'+
+          '<img src="'+byId[ph.id]+'" alt="'+escAttr(z+' — '+usage)+'" tabindex="0" data-zoom="1">'+
+          '<div class="p-body"><div class="p-tag" style="--c:'+color+'">'+esc(usage)+'</div>'+
           (ph.comment? '<div class="p-comment">'+esc(ph.comment)+'</div>':'')+
           '<div class="p-time">'+fmtDateTime(ph.ts)+'</div></div></div>';
       }).join('');
-      return '<section><h2>'+esc(z)+'</h2><div class="p-grid">'+cards+'</div></section>';
+      return '<section class="zone-sec"><h2>'+esc(z)+'</h2><div class="p-grid">'+cards+'</div></section>';
     }).join('');
     var equipRows = state.equip.map(function(n){
-      var sketchImgs = (sketchById[n.id]||[]).map(function(u){ return '<img src="'+u+'">'; }).join('');
+      var sketchImgs = (sketchById[n.id]||[]).map(function(u, i){ return '<img src="'+u+'" alt="Schéma '+(i+1)+'" tabindex="0" data-zoom="1">'; }).join('');
       var voiceEls = (voiceById[n.id]||[]).map(function(x){ return '<audio controls src="'+x.url+'"></audio>'; }).join('');
-      return '<div class="n-card"><div class="n-head"><b>'+esc(n.title||'Sans titre')+'</b><span>'+fmtDateTime(n.ts)+'</span></div>'+
+      return '<div class="n-card" data-z="'+escAttr(n.zone||'Sans zone')+'" data-u="'+escAttr(n.usage||'Sans usage')+'" data-c="'+(usageColor(n.usage)||'#8993A1')+'">'+
+        '<div class="n-head"><b>'+esc(n.title||'Sans titre')+'</b><span>'+fmtDateTime(n.ts)+'</span></div>'+
         '<div class="n-tags">'+[n.zone,n.usage].filter(Boolean).map(function(t){return '<span>'+esc(t)+'</span>';}).join('')+'</div>'+
         '<div class="n-text">'+esc(n.text||'')+'</div>'+
         (sketchImgs? '<div class="n-sketches">'+sketchImgs+'</div>':'')+
@@ -1513,7 +1518,7 @@ function buildReportHtml(){
     }).join('') || '<tr><td colspan="3" class="muted">Aucun pense-bête.</td></tr>';
     var doneCount = state.todos.filter(function(t){return t.done;}).length;
 
-    return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Audit — '+esc(v.site)+'</title>'+
+    return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Audit — '+esc(v.site)+'</title>'+
     '<style>'+
     'body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#EDF1F5;color:#1B222C;margin:0;padding:32px 20px 60px;}'+
     '.wrap{max-width:900px;margin:0 auto;}'+
@@ -1547,15 +1552,216 @@ function buildReportHtml(){
     'td.done{text-decoration:line-through;color:#8993A1;}'+
     '.muted{color:#8993A1;font-size:13px;}'+
     'footer{margin-top:40px;font-size:11px;color:#8993A1;text-align:center;}'+
+    '[hidden]{display:none!important;}.hide{display:none!important;}'+
+    '.filters{background:#fff;border:1px solid #DCE2E9;border-radius:12px;padding:14px 16px;margin:0 0 28px;}'+
+    '.f-row{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;}'+
+    '.f-label{flex:none;width:48px;padding-top:7px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5B6472;}'+
+    '.f-chips{display:flex;flex-wrap:wrap;gap:6px;}'+
+    '.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #C3CBD6;background:#F5F7FA;color:#1B222C;border-radius:99px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;}'+
+    '.chip i{width:8px;height:8px;border-radius:50%;display:inline-block;}'+
+    '.chip.on{background:#DDE7F8;border-color:#2458B3;color:#1B4488;font-weight:600;}'+
+    '.chip:focus-visible,img[data-zoom]:focus-visible,.lb-btn:focus-visible,#fReset:focus-visible{outline:2px solid #2458B3;outline-offset:2px;}'+
+    '.f-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12.5px;color:#5B6472;margin-top:4px;}'+
+    '#fReset{border:none;background:none;color:#2458B3;font:inherit;font-size:12.5px;font-weight:600;text-decoration:underline;cursor:pointer;padding:2px 0;}'+
+    'img[data-zoom]{cursor:zoom-in;}'+
+    'body.lb-open{overflow:hidden;}'+
+    '.lb{position:fixed;top:0;right:0;bottom:0;left:0;z-index:100;background:rgba(10,14,20,.97);display:flex;align-items:center;justify-content:center;padding:56px 64px 24px;box-sizing:border-box;overscroll-behavior:contain;}'+
+    '.lb-fig{margin:0;display:flex;flex-direction:column;align-items:center;gap:12px;max-width:100%;max-height:100%;}'+
+    '.lb-fig img{display:block;max-width:100%;max-height:calc(100vh - 190px);max-height:calc(100dvh - 190px);object-fit:contain;border-radius:6px;background:#000;}'+
+    '.lb-cap{color:#E7EAEE;text-align:center;font-size:13.5px;line-height:1.45;max-width:640px;}'+
+    '.lb-head{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;}'+
+    '.lb-tag{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;background:color-mix(in srgb, var(--c) 28%, #0A0E14);color:#fff;border:1px solid var(--c);}'+
+    '.lb-com{margin-top:6px;white-space:pre-wrap;}'+
+    '.lb-time{margin-top:4px;font-size:11px;font-family:monospace;color:#9AA4B2;}'+
+    '.lb-btn{position:absolute;border:none;background:rgba(255,255,255,.14);color:#fff;width:44px;height:44px;border-radius:50%;font-size:26px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}'+
+    '.lb-btn:hover{background:rgba(255,255,255,.26);}'+
+    '.lb-close{top:12px;right:12px;}'+
+    '.lb-prev{left:10px;top:50%;margin-top:-22px;}'+
+    '.lb-next{right:10px;top:50%;margin-top:-22px;}'+
+    '.lb.single .lb-prev,.lb.single .lb-next{display:none;}'+
+    '.lb-count{position:absolute;top:24px;left:50%;transform:translateX(-50%);color:#C3CBD6;font-size:12px;font-family:monospace;}'+
+    '@media (max-width:640px){'+
+      'body{padding:20px 12px 48px;}'+
+      '.stats{gap:8px;}.stat{flex:1;padding:10px 8px;}'+
+      '.f-row{flex-direction:column;gap:6px;}.f-label{width:auto;padding-top:0;}'+
+      '.lb{padding:56px 10px 16px;}.lb-btn{width:38px;height:38px;font-size:22px;}.lb-prev{left:6px;margin-top:-19px;}.lb-next{right:6px;margin-top:-19px;}'+
+    '}'+
+    '@media print{.filters,.lb{display:none!important;}}'+
     '</style></head><body><div class="wrap">'+
     '<header><h1>Carnet d’audit — '+esc(v.site)+'</h1><p>'+fmtDate(v.date)+(v.auditeur?' · Auditeur : '+esc(v.auditeur):'')+'</p></header>'+
     '<div class="stats"><div class="stat"><b>'+state.photos.length+'</b><span>Photos</span></div><div class="stat"><b>'+state.equip.length+'</b><span>Notes</span></div><div class="stat"><b>'+doneCount+'/'+state.todos.length+'</b><span>Pense-bête</span></div></div>'+
-    '<section><h2>Photos</h2>'+(zoneSections||'<p class="muted">Aucune photo.</p>')+'</section>'+
-    '<section><h2>Notes équipement</h2>'+equipRows+'</section>'+
+    '<div class="filters" id="filters" hidden>'+
+      '<div class="f-row" id="fZones" hidden><span class="f-label">Zone</span><div class="f-chips"></div></div>'+
+      '<div class="f-row" id="fUsages" hidden><span class="f-label">Usage</span><div class="f-chips"></div></div>'+
+      '<div class="f-foot"><span id="fCount"></span><button type="button" id="fReset" hidden>Réinitialiser les filtres</button></div>'+
+    '</div>'+
+    '<section><h2>Photos</h2>'+(zoneSections||'<p class="muted">Aucune photo.</p>')+'<p class="muted" id="noPhotosF" hidden>Aucune photo ne correspond aux filtres.</p></section>'+
+    '<section><h2>Notes équipement</h2>'+equipRows+'<p class="muted" id="noNotesF" hidden>Aucune note ne correspond aux filtres.</p></section>'+
     '<section><h2>Pense-bête</h2><table>'+todoRows+'</table></section>'+
     '<footer>Généré avec Carnet d’Audit — '+fmtDateTime(Date.now())+'</footer>'+
-    '</div></body></html>';
+    '</div>'+
+    '<div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Photo agrandie">'+
+      '<button type="button" class="lb-btn lb-close" aria-label="Fermer">&times;</button>'+
+      '<div class="lb-count" id="lbCount"></div>'+
+      '<button type="button" class="lb-btn lb-prev" aria-label="Précédente">&#8249;</button>'+
+      '<figure class="lb-fig"><img id="lbImg" alt=""><figcaption class="lb-cap" id="lbCap"></figcaption></figure>'+
+      '<button type="button" class="lb-btn lb-next" aria-label="Suivante">&#8250;</button>'+
+    '</div>'+
+    '<script>('+reportClientScript.toString()+')();<\/script>'+
+    '</body></html>';
   });
+}
+
+/* Runs inside the exported report (serialised with toString) — must not reference anything from the app. */
+function reportClientScript(){
+  "use strict";
+  var items = [].slice.call(document.querySelectorAll('.p-card, .n-card'));
+  var totalP = document.querySelectorAll('.p-card').length;
+  var totalN = items.length - totalP;
+  var sel = {z:Object.create(null), u:Object.create(null)};
+  var box = document.getElementById('filters');
+  var countEl = document.getElementById('fCount'), resetBtn = document.getElementById('fReset');
+  var noP = document.getElementById('noPhotosF'), noN = document.getElementById('noNotesF');
+  var rz = null, ru = null;
+
+  function plural(n, w){ return n + ' ' + w + (n > 1 ? 's' : ''); }
+  function active(key){ return Object.keys(sel[key]).length > 0; }
+  function distinct(attr){
+    var seen = Object.create(null), out = [];
+    items.forEach(function(el){
+      var v = el.getAttribute(attr);
+      if(!seen[v]){ seen[v] = true; out.push({v:v, c:el.getAttribute('data-c')}); }
+    });
+    return out;
+  }
+  function chip(label, color, onClick){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip';
+    if(color){ var d = document.createElement('i'); d.style.background = color; b.appendChild(d); }
+    b.appendChild(document.createTextNode(label));
+    b.addEventListener('click', onClick);
+    return b;
+  }
+  function mark(b, on){ b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+  function buildRow(key, rowId, list, allLabel){
+    if(list.length < 2) return null;
+    var row = document.getElementById(rowId);
+    row.hidden = false;
+    var wrap = row.querySelector('.f-chips');
+    var all = chip(allLabel, null, function(){ sel[key] = Object.create(null); update(); });
+    wrap.appendChild(all);
+    var btns = list.map(function(x){
+      var b = chip(x.v, key === 'u' ? x.c : null, function(){
+        if(sel[key][x.v]) delete sel[key][x.v]; else sel[key][x.v] = true;
+        update();
+      });
+      wrap.appendChild(b);
+      return {b:b, v:x.v};
+    });
+    return {key:key, all:all, btns:btns};
+  }
+  function refresh(r){
+    if(!r) return;
+    mark(r.all, !active(r.key));
+    r.btns.forEach(function(x){ mark(x.b, !!sel[r.key][x.v]); });
+  }
+  function update(){
+    var az = active('z'), au = active('u'), shownP = 0, shownN = 0;
+    items.forEach(function(el){
+      var ok = (!az || sel.z[el.getAttribute('data-z')]) && (!au || sel.u[el.getAttribute('data-u')]);
+      el.classList.toggle('hide', !ok);
+      if(ok){ if(el.classList.contains('p-card')) shownP++; else shownN++; }
+    });
+    [].forEach.call(document.querySelectorAll('.zone-sec'), function(sec){
+      sec.classList.toggle('hide', !sec.querySelector('.p-card:not(.hide)'));
+    });
+    noP.hidden = !(totalP > 0 && shownP === 0);
+    noN.hidden = !(totalN > 0 && shownN === 0);
+    refresh(rz); refresh(ru);
+    var filtered = az || au, parts = [];
+    if(totalP) parts.push(filtered ? plural(shownP, 'photo') + ' sur ' + totalP : plural(totalP, 'photo'));
+    if(totalN) parts.push(filtered ? plural(shownN, 'note') + ' sur ' + totalN : plural(totalN, 'note'));
+    countEl.textContent = parts.join(' · ');
+    resetBtn.hidden = !filtered;
+  }
+
+  rz = buildRow('z', 'fZones', distinct('data-z'), 'Toutes');
+  ru = buildRow('u', 'fUsages', distinct('data-u').sort(function(a, b){ return a.v.localeCompare(b.v, 'fr'); }), 'Tous');
+  box.hidden = !(rz || ru);
+  resetBtn.addEventListener('click', function(){ sel.z = Object.create(null); sel.u = Object.create(null); update(); });
+  update();
+
+  /* ---- lightbox ---- */
+  var lb = document.getElementById('lb'), lbImg = document.getElementById('lbImg');
+  var lbCap = document.getElementById('lbCap'), lbCount = document.getElementById('lbCount');
+  var list = [], idx = 0;
+
+  function line(cls, text){ var d = document.createElement('div'); d.className = cls; d.textContent = text; return d; }
+  function describe(img){
+    lbCap.textContent = '';
+    var card = img.closest('.p-card');
+    if(card){
+      var head = document.createElement('div'); head.className = 'lb-head';
+      var z = document.createElement('b'); z.textContent = card.getAttribute('data-z'); head.appendChild(z);
+      var u = document.createElement('span'); u.className = 'lb-tag';
+      u.style.setProperty('--c', card.getAttribute('data-c')); u.textContent = card.getAttribute('data-u'); head.appendChild(u);
+      lbCap.appendChild(head);
+      var com = card.querySelector('.p-comment'); if(com) lbCap.appendChild(line('lb-com', com.textContent));
+      var tm = card.querySelector('.p-time'); if(tm) lbCap.appendChild(line('lb-time', tm.textContent));
+    } else {
+      var note = img.closest('.n-card'), title = note && note.querySelector('.n-head b');
+      lbCap.appendChild(line('lb-head', img.alt + (title ? ' — ' + title.textContent : '')));
+    }
+  }
+  function show(i){
+    idx = (i + list.length) % list.length;
+    var img = list[idx];
+    lbImg.src = img.src; lbImg.alt = img.alt || '';
+    describe(img);
+    lbCount.textContent = list.length > 1 ? (idx + 1) + ' / ' + list.length : '';
+    lb.classList.toggle('single', list.length < 2);
+  }
+  function open(img){
+    var card = img.closest('.p-card'), scope = card ? document : img.closest('.n-card');
+    list = [].slice.call(scope.querySelectorAll(card ? '.p-card:not(.hide) img[data-zoom]' : 'img[data-zoom]'));
+    show(list.indexOf(img));
+    lb.hidden = false; document.body.classList.add('lb-open');
+    lb.querySelector('.lb-close').focus();
+  }
+  function close(){
+    lb.hidden = true; document.body.classList.remove('lb-open'); lbImg.removeAttribute('src');
+    if(list[idx] && list[idx].focus) list[idx].focus();
+  }
+
+  document.addEventListener('click', function(e){
+    var img = e.target.closest ? e.target.closest('img[data-zoom]') : null;
+    if(img) open(img);
+  });
+  document.addEventListener('keydown', function(e){
+    if(lb.hidden){
+      if((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('img[data-zoom]')){ e.preventDefault(); open(e.target); }
+      return;
+    }
+    if(e.key === 'Escape') close();
+    else if(e.key === 'ArrowLeft') show(idx - 1);
+    else if(e.key === 'ArrowRight') show(idx + 1);
+  });
+  lb.addEventListener('click', function(e){ if(e.target === lb) close(); });
+  lb.querySelector('.lb-close').addEventListener('click', close);
+  lb.querySelector('.lb-prev').addEventListener('click', function(){ show(idx - 1); });
+  lb.querySelector('.lb-next').addEventListener('click', function(){ show(idx + 1); });
+
+  var tx = 0, ty = 0, multi = false;
+  lb.addEventListener('touchstart', function(e){
+    multi = e.touches.length > 1;
+    if(!multi){ tx = e.touches[0].clientX; ty = e.touches[0].clientY; }
+  }, {passive:true});
+  lb.addEventListener('touchend', function(e){
+    if(multi || list.length < 2) return;
+    if(window.visualViewport && window.visualViewport.scale > 1.05) return;
+    var t = e.changedTouches[0], dx = t.clientX - tx, dy = t.clientY - ty;
+    if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) show(idx + (dx < 0 ? 1 : -1));
+  }, {passive:true});
 }
 
 function buildWorkbook(){
