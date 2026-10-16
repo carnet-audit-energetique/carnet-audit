@@ -353,6 +353,23 @@ input,textarea{font-family:inherit;}
 .hint{font-size:12px; color:var(--ink-faint); line-height:1.5;}
 .field-chips{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;}
 .field-chip{font-size:11.5px; padding:5px 10px; border-radius:999px; background:var(--surface-2); border:1px solid var(--line); color:var(--ink-soft); cursor:pointer;}
+
+/* ---------- fiches équipement structurées ---------- */
+.ef-count{font-family:var(--font-mono); font-size:11px; color:var(--ink-faint); font-weight:400; letter-spacing:0; text-transform:none;}
+.ef-list{display:flex; flex-direction:column; gap:12px; margin-top:14px;}
+.ef-list:empty{display:none;}
+.ef-row label{display:block; font-size:12px; font-weight:600; letter-spacing:.02em; color:var(--ink-soft); margin-bottom:5px;}
+.ef-row input{width:100%; padding:11px 13px; border-radius:var(--radius-sm); border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); font-size:16px; outline:none;}
+.ef-row input:focus{border-color:var(--accent);}
+.ef-row.filled input{border-color:color-mix(in srgb, var(--good) 60%, var(--line-strong)); background:color-mix(in srgb, var(--good) 5%, var(--surface));}
+.ef-chips{display:flex; gap:6px; overflow-x:auto; margin-top:6px; padding-bottom:2px; scrollbar-width:none;}
+.ef-chips::-webkit-scrollbar{display:none;}
+.ef-chip{flex:none; min-height:36px; padding:7px 13px; border-radius:999px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink); font-size:13.5px; cursor:pointer;}
+.ef-chip.on{background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink); font-weight:600;}
+.note-type{font-size:10.5px; padding:2px 8px; border-radius:999px; background:var(--accent-soft); color:var(--accent-ink); font-weight:600;}
+.note-fields{display:grid; grid-template-columns:auto 1fr; gap:3px 12px; font-size:12.5px; margin:6px 0 4px;}
+.note-fields dt{color:var(--ink-soft);}
+.note-fields dd{margin:0; font-weight:500; overflow-wrap:anywhere;}
 </style>
 </head>
 <body>
@@ -510,7 +527,7 @@ input,textarea{font-family:inherit;}
     <ol class="help-steps">
       <li><span><strong>Visite</strong> — tapotez la pastille en haut pour créer ou changer de visite (site, date, auditeur). Photos et notes sont toujours rattachées à la visite active.</span></li>
       <li><span><strong>Photo</strong> — bouton central de la barre du bas : ouvre l'appareil photo natif de votre téléphone. Classez ensuite par usage, commentaire et zone.</span></li>
-      <li><span><strong>Notes</strong> — onglet Notes : fiches équipement (avec schémas annotables et notes vocales), ou pense-bête à cocher au fur et à mesure.</span></li>
+      <li><span><strong>Notes</strong> — onglet Notes : fiches équipement (avec schémas annotables et notes vocales), ou pense-bête à cocher au fur et à mesure. Choisissez le type de fiche (compresseur, chaudière, groupe froid…) : ses champs s'affichent avec les valeurs courantes à toucher, et chaque fiche devient une colonne du tableau d'équipements dans Studio Rapport. « Dupliquer » recopie une fiche pour la machine identique suivante.</span></li>
       <li><span><strong>Rapport</strong> — onglet Rapport : générez le rapport photo (HTML) et le fichier de données (Excel), ou sauvegardez sur Google Drive.</span></li>
     </ol>
 
@@ -618,13 +635,16 @@ input,textarea{font-family:inherit;}
     </div>
     <div class="section-title" style="margin-top:0;">Usage / poste énergétique</div>
     <div class="chip-row" id="equipUsages"></div>
-    <div class="field" style="margin-top:14px;">
-      <label>Caractéristiques / fonctionnement</label>
+    <div class="section-title">Zone</div>
+    <div class="chip-row" id="equipZones"></div>
+    <div class="section-title">Fiche<span class="ef-count" id="equipFieldCount"></span></div>
+    <div class="chip-row" id="equipTypes"></div>
+    <div class="ef-list" id="equipFields"></div>
+    <div class="field" style="margin-top:16px;">
+      <label id="equipTextLabel">Caractéristiques / fonctionnement</label>
       <div class="field-chips" id="equipQuickFields"></div>
       <textarea id="equipText" placeholder="Puissance, régime horaire, état, observations…"></textarea>
     </div>
-    <div class="section-title">Zone</div>
-    <div class="chip-row" id="equipZones"></div>
     <div class="section-title">Schémas</div>
     <div class="sketch-strip" id="equipSketches"></div>
     <div class="section-title">Notes vocales</div>
@@ -730,6 +750,58 @@ var DEFAULT_USAGES = [
 ];
 var EXTRA_COLORS = ['#4E6EF2','#C2410C','#0891B2','#65A30D','#9333EA','#B45309'];
 var QUICK_FIELDS = ['Puissance','Débit','Pression','Température','Année / marque','Régime horaire','État'];
+/* Fiches équipement : mêmes gabarits que les tableaux d'équipements de Studio Rapport (js/ingest.js, Model.EQUIP).
+   Un libellé modifié ici doit l'être aussi là-bas, sinon le champ arrive dans Studio en ligne supplémentaire. */
+var EQUIP_TYPES = {
+  air:{titre:'Compresseur', pluriel:'Compresseurs', champs:['Localisation','Marque','Modèle','Année','Technologie','Fonctionnement','Puissance plaquée (kWé)','Capacité (Nm³/h)','Type de refroidissement','Régulation','Consigne de pression (bar)','Récupération de chaleur']},
+  secheur:{titre:'Sécheur', pluriel:'Sécheurs', champs:['Marque','Modèle','Technologie','Fluide frigorigène','Année','Puissance plaquée (kWé)','Type de régénération','Point de rosée (°C)']},
+  chaudiere:{titre:'Chaudière', pluriel:'Chaudières', champs:['Localisation','Marque','Modèle','Année','Combustible','Puissance utile (kW)','Production vapeur (t/h)','Pression de service (bar)','Brûleur','Modulation','Économiseur','Mode de fonctionnement']},
+  froid:{titre:'Groupe froid', pluriel:'Groupes froid', champs:['Localisation','Marque','Modèle','Année','Fluide frigorigène','Technologie compresseurs','Nb de compresseurs','Puissance frigorifique (kWf)','Puissance électrique (kWé)','Régime de température (°C)','Condenseur / gas cooler','Variation de vitesse','Récupération de chaleur']},
+  cta:{titre:'CTA', pluriel:'CTA', champs:['Localisation','Zone desservie','Marque','Année','Débit (m³/h)','Puissance ventilateurs (kW)','Variation de vitesse','Batterie chaude','Batterie froide','Récupérateur','Régulation','Plages de fonctionnement']},
+  generique:{titre:'Équipement', pluriel:'Équipements', champs:['Localisation','Marque','Modèle','Année','Puissance (kW)','Fonctionnement','Régulation','Commentaires']}
+};
+var EQUIP_ORDER = ['air','secheur','chaudiere','froid','cta','generique'];
+var USAGE_EQUIP = {'Air comprimé':'air', 'Vapeur / Chaleur':'chaudiere', 'Production de froid':'froid', 'Ventilation / CVC':'cta'};
+/* Valeurs courantes proposées au pouce (« type:champ » pour un choix propre à un type) */
+var EQUIP_CHOICES = {
+  'air:Marque':['Atlas Copco','Kaeser','Ingersoll Rand','CompAir','Boge','Sullair','Mattei'],
+  'secheur:Marque':['Atlas Copco','Kaeser','Ingersoll Rand','CompAir','Boge','Parker','Donaldson'],
+  'froid:Marque':['Bitzer','Johnson Controls','GEA','Carrier','Trane','Daikin','Mayekawa'],
+  'cta:Marque':['France Air','CIAT','Aldes','Systemair','Wesper'],
+  'air:Technologie':['Vis lubrifiée','Vis sèche','Piston','Centrifuge','Scroll'],
+  'secheur:Technologie':['Frigorifique','Adsorption'],
+  'air:Fonctionnement':['Base','Appoint','Secours'],
+  'generique:Fonctionnement':['Continu','Production','Intermittent','Secours'],
+  'Type de refroidissement':['Air','Eau'],
+  'air:Régulation':['Charge / vide','Variation de vitesse','Modulation'],
+  'cta:Régulation':['Horloge','Sonde T°','Sonde CO2','GTC','Manuelle'],
+  'Régulation':['Tout ou rien','Variation de vitesse','Horloge','GTC','Manuelle'],
+  'Récupération de chaleur':['Oui','Non'],
+  'Variation de vitesse':['Oui','Non'],
+  'Économiseur':['Oui','Non'],
+  'Fluide frigorigène':['NH3','CO2','R404A','R449A','R448A','R134a','R407F','R290','R410A','R32'],
+  'Type de régénération':['Sans objet','À froid','À chaud','Par vide'],
+  'Point de rosée (°C)':['+3','-20','-40','-70'],
+  'Combustible':['Gaz naturel','Fioul','Propane','Biomasse'],
+  'Brûleur':['Modulant','2 allures','Tout ou rien'],
+  'Mode de fonctionnement':['Continu','Discontinu','Secours'],
+  'Technologie compresseurs':['Vis','Piston','Scroll','Centrifuge'],
+  'Condenseur / gas cooler':['Évaporatif','À air','À eau','Gas cooler'],
+  'Batterie chaude':['Eau chaude','Vapeur','Électrique','Gaz','Aucune'],
+  'Batterie froide':['Eau glacée','Détente directe','Aucune'],
+  'Récupérateur':['Plaques','Roue','Eau glycolée','Aucun'],
+  'Plages de fonctionnement':['24h/24','Heures ouvrées','2×8','3×8']
+};
+function equipTypeFor(usage){ return usage ? (USAGE_EQUIP[usage] || 'generique') : ''; }
+function fieldChoices(type, label){ return EQUIP_CHOICES[type+':'+label] || EQUIP_CHOICES[label] || null; }
+/* Clavier adapté : chiffres pour les années et compteurs, numérique décimal pour les grandeurs sans signe (le °C garde le clavier texte pour le signe moins) */
+function fieldInputMode(label){ return /^(Année|Nb )/.test(label) ? 'numeric' : /\((kW|kWé|kWf|bar|Nm³\/h|t\/h|m³\/h)\)/.test(label) ? 'decimal' : ''; }
+/* Champs renseignés d'une fiche, dans l'ordre du gabarit */
+function equipFieldList(n){
+  var t = EQUIP_TYPES[n.type]; if(!t) return [];
+  var f = n.fields || {};
+  return t.champs.filter(function(c){ return f[c] && String(f[c]).trim(); }).map(function(c){ return [c, String(f[c]).trim()]; });
+}
 var SK_COLORS = ['#1B222C','#2458B3','#C0392B','#2E7D5B','#E0A500'];
 
 /* ---------- indexeddb ---------- */
@@ -1249,29 +1321,48 @@ function renderEquip(){
   wrap.innerHTML='';
   state.equip.forEach(function(n){
     var card = document.createElement('div'); card.className='card note-card'; card.style.setProperty('--c', usageColor(n.usage)||'var(--accent)');
-    var tags = [n.zone, n.usage].filter(Boolean).map(function(t){return '<span class="tag-mini">'+esc(t)+'</span>';}).join('');
+    var et = EQUIP_TYPES[n.type], fl = equipFieldList(n);
+    var tags = (et? '<span class="note-type">'+esc(et.titre)+' · '+fl.length+'/'+et.champs.length+'</span>':'') + [n.zone, n.usage].filter(Boolean).map(function(t){return '<span class="tag-mini">'+esc(t)+'</span>';}).join('');
     var sketches = (n.sketches||[]).map(function(sk){ return '<img src="'+URL.createObjectURL(sk.blob)+'">'; }).join('');
     card.innerHTML =
       '<div class="note-head"><span class="note-title">'+esc(n.title||'Sans titre')+'</span><span class="note-time">'+fmtDateTime(n.ts)+'</span></div>'+
       (tags? '<div class="note-tags">'+tags+'</div>':'')+
+      (fl.length? '<dl class="note-fields">'+fl.map(function(f){ return '<dt>'+esc(f[0])+'</dt><dd>'+esc(f[1])+'</dd>'; }).join('')+'</dl>':'')+
       '<div class="note-text">'+esc(n.text||'')+'</div>'+
       (sketches? '<div class="note-sketches">'+sketches+'</div>':'')+
-      '<div class="card-actions"><button class="icon-btn edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Modifier</button></div>';
+      '<div class="card-actions">'+
+        (et? '<button class="icon-btn dup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Dupliquer</button>':'')+
+        '<button class="icon-btn edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Modifier</button></div>';
     (n.voiceNotes||[]).forEach(function(vn){
       var audio = document.createElement('audio'); audio.controls = true; audio.preload = 'metadata'; audio.src = URL.createObjectURL(vn.blob);
       audio.style.width = '100%'; audio.style.marginTop = '8px'; audio.style.height = '32px';
       card.insertBefore(audio, card.querySelector('.card-actions'));
     });
     card.querySelector('.edit').addEventListener('click', function(){ openEquipEditor(n.id); });
+    if(et) card.querySelector('.dup').addEventListener('click', function(){ duplicateEquip(n); });
     wrap.appendChild(card);
   });
 }
-function openEquipEditor(id){
-  var n = id ? state.equip.find(function(x){return x.id===id;}) : {id:uid(), visitId:state.currentVisitId, title:'', zone:null, usage:null, text:'', sketches:[], voiceNotes:[], ts:Date.now()};
+/* Machine identique suivante : même type, mêmes champs, titre incrémenté (rien n'est enregistré avant « Enregistrer ») */
+function duplicateEquip(src){
+  var titles = state.equip.map(function(x){ return x.title; });
+  var title = src.title || '';
+  do {
+    var m = /^(.*?)(\d+)\s*$/.exec(title);
+    title = m ? m[1] + (+m[2] + 1) : (title ? title + ' 2' : '');
+  } while(title && titles.indexOf(title) >= 0);
+  openEquipEditor(null, { id:uid(), visitId:state.currentVisitId, title:title, zone:src.zone, usage:src.usage, type:src.type, fields:Object.assign({}, src.fields||{}), text:'', sketches:[], voiceNotes:[], ts:Date.now() });
+}
+function openEquipEditor(id, draft){
+  var n = id ? state.equip.find(function(x){return x.id===id;}) : draft || {id:uid(), visitId:state.currentVisitId, title:'', zone:(state.lastZoneUsed||{})[state.currentVisitId]||null, usage:state.lockedUsage[state.currentVisitId]||null, text:'', sketches:[], voiceNotes:[], ts:Date.now()};
   n.sketches = n.sketches || [];
   n.voiceNotes = n.voiceNotes || [];
   n._persisted = !!id;
-  document.getElementById('equipTitle').textContent = id ? 'Modifier la note' : 'Nouvelle note équipement';
+  // type de fiche et champs : copie de travail, reportée dans la note à l'enregistrement
+  var type = id || draft ? (EQUIP_TYPES[n.type] ? n.type : '') : equipTypeFor(n.usage);
+  var typeTouched = !!(id || draft);
+  var fields = Object.assign({}, n.fields || {});
+  document.getElementById('equipTitle').textContent = id ? 'Modifier la note' : draft ? 'Copie de la fiche' : 'Nouvelle note équipement';
   document.getElementById('equipName').value = n.title||'';
   document.getElementById('equipText').value = n.text||'';
   document.getElementById('deleteEquip').style.display = id ? 'flex' : 'none';
@@ -1291,20 +1382,85 @@ function openEquipEditor(id){
     qf.appendChild(c);
   });
 
+  function anyField(){ return Object.keys(fields).some(function(k){ return String(fields[k]||'').trim(); }); }
+  // l'usage choisi propose le type de fiche, tant que l'auditeur n'en a pas choisi un ni rempli de champ
+  function pickUsage(v){ n.usage=v; if(!typeTouched && !anyField()){ type = equipTypeFor(v); renderTypes(); renderFields(); } draw(); }
   function draw(){
     renderChipRow(document.getElementById('equipZones'), state.zones, n.zone, {
-      onSelect:function(v){ n.zone=v; draw(); }, onAdd:function(v){ state.zones.push(v); saveMeta(); n.zone=v; draw(); }
+      onSelect:function(v){ n.zone=v; draw(); renderFields(); }, onAdd:function(v){ state.zones.push(v); saveMeta(); n.zone=v; draw(); renderFields(); }
     });
     renderChipRow(document.getElementById('equipUsages'), state.usages, n.usage, {
-      onSelect:function(v){ n.usage=v; draw(); },
-      onAdd:function(v){ state.usages.push({label:v, color:EXTRA_COLORS[state.usages.length % EXTRA_COLORS.length]}); saveMeta(); n.usage=v; draw(); }
+      onSelect:pickUsage,
+      onAdd:function(v){ state.usages.push({label:v, color:EXTRA_COLORS[state.usages.length % EXTRA_COLORS.length]}); saveMeta(); pickUsage(v); }
     });
   }
-  draw();
+  function renderTypes(){
+    var wrap = document.getElementById('equipTypes'); wrap.innerHTML='';
+    [['','Note libre']].concat(EQUIP_ORDER.map(function(k){ return [k, EQUIP_TYPES[k].titre]; })).forEach(function(x){
+      var c = document.createElement('div'); c.className='chip'+(type===x[0]?' selected':''); c.textContent=x[1];
+      c.addEventListener('click', function(){ type=x[0]; typeTouched=true; renderTypes(); renderFields(); });
+      wrap.appendChild(c);
+    });
+  }
+  function updateCount(){
+    var t = EQUIP_TYPES[type];
+    document.getElementById('equipFieldCount').textContent = t ? t.champs.filter(function(c){ return String(fields[c]||'').trim(); }).length+'/'+t.champs.length+' champs' : '';
+  }
+  function renderFields(){
+    var wrap = document.getElementById('equipFields'); wrap.innerHTML='';
+    var t = EQUIP_TYPES[type];
+    document.getElementById('equipQuickFields').style.display = t ? 'none' : 'flex';
+    document.getElementById('equipTextLabel').textContent = t ? 'Observations' : 'Caractéristiques / fonctionnement';
+    document.getElementById('equipText').placeholder = t ? 'État, réglages, constats, pistes d’amélioration…' : 'Puissance, régime horaire, état, observations…';
+    document.getElementById('equipName').placeholder = t ? t.titre+' n°'+(state.equip.filter(function(x){ return x.type===type && x.id!==n.id; }).length+1) : 'Ex : Compresseur GA37 n°2';
+    updateCount();
+    if(!t) return;
+    t.champs.forEach(function(label, i){
+      var row = document.createElement('div'); row.className='ef-row';
+      var lab = document.createElement('label'); lab.htmlFor='ef_'+i; lab.textContent=label;
+      var inp = document.createElement('input'); inp.type='text'; inp.id='ef_'+i; inp.value=fields[label]||''; inp.autocomplete='off';
+      var mode = fieldInputMode(label); if(mode) inp.setAttribute('inputmode', mode);
+      inp.setAttribute('enterkeyhint', i < t.champs.length-1 ? 'next' : 'done');
+      row.appendChild(lab); row.appendChild(inp);
+      var choices = label==='Localisation' ? (n.zone ? [n.zone] : null) : fieldChoices(type, label);
+      var cw = null;
+      if(choices){
+        cw = document.createElement('div'); cw.className='ef-chips';
+        choices.forEach(function(v){
+          var b = document.createElement('button'); b.type='button'; b.className='ef-chip'; b.textContent=v;
+          b.addEventListener('click', function(){ inp.value = inp.value===v ? '' : v; fields[label]=inp.value; mark(); });
+          cw.appendChild(b);
+        });
+        row.appendChild(cw);
+      }
+      function mark(){
+        row.classList.toggle('filled', !!inp.value.trim());
+        if(cw) [].forEach.call(cw.children, function(b){ b.classList.toggle('on', b.textContent===inp.value); });
+        updateCount();
+      }
+      inp.addEventListener('input', function(){ fields[label]=inp.value; mark(); });
+      inp.addEventListener('keydown', function(e){
+        if(e.key!=='Enter') return;
+        e.preventDefault();
+        var nx = document.getElementById('ef_'+(i+1)); if(nx) nx.focus(); else inp.blur();
+      });
+      mark();
+      wrap.appendChild(row);
+    });
+  }
+  draw(); renderTypes(); renderFields();
 
   document.getElementById('saveEquip').onclick = function(){
     n.title = document.getElementById('equipName').value.trim();
     n.text = document.getElementById('equipText').value.trim();
+    n.type = type;
+    var t = EQUIP_TYPES[type], kept = {};
+    if(t){
+      t.champs.forEach(function(c){ var v = String(fields[c]||'').trim(); if(v) kept[c] = v; });
+      if(!kept['Localisation'] && n.zone && t.champs.indexOf('Localisation')>=0) kept['Localisation'] = n.zone;
+      if(!n.title) n.title = document.getElementById('equipName').placeholder;
+    }
+    n.fields = kept;
     putRec('equip', n).then(function(){
       if(!state.equip.find(function(x){return x.id===n.id;})) state.equip.unshift(n);
       closeOverlay('overlayEquip'); renderEquip(); renderHome(); toast('Note enregistrée ✓');
@@ -1317,6 +1473,7 @@ function openEquipEditor(id){
       closeOverlay('overlayEquip'); renderEquip(); renderHome(); toast('Note supprimée');
     });
   };
+  document.querySelector('#overlayEquip .overlay-body').scrollTop = 0; // la fiche précédente a pu laisser le formulaire défilé
   openOverlay('overlayEquip');
 }
 document.getElementById('closeEquip').addEventListener('click', function(){
@@ -1494,7 +1651,7 @@ function buildReportHtml(){
       var cards = zones[z].map(function(ph){
         var color = usageColor(ph.usage) || '#8993A1';
         var usage = ph.usage || 'Sans usage';
-        return '<div class="p-card" data-z="'+escAttr(z)+'" data-u="'+escAttr(usage)+'" data-c="'+color+'">'+
+        return '<div class="p-card" data-id="'+escAttr(ph.id)+'" data-z="'+escAttr(z)+'" data-u="'+escAttr(usage)+'" data-c="'+color+'">'+
           '<img src="'+byId[ph.id]+'" alt="'+escAttr(z+' — '+usage)+'" tabindex="0" data-zoom="1">'+
           '<div class="p-body"><div class="p-tag" style="--c:'+color+'">'+esc(usage)+'</div>'+
           (ph.comment? '<div class="p-comment">'+esc(ph.comment)+'</div>':'')+
@@ -1505,9 +1662,13 @@ function buildReportHtml(){
     var equipRows = state.equip.map(function(n){
       var sketchImgs = (sketchById[n.id]||[]).map(function(u, i){ return '<img src="'+u+'" alt="Schéma '+(i+1)+'" tabindex="0" data-zoom="1">'; }).join('');
       var voiceEls = (voiceById[n.id]||[]).map(function(x){ return '<audio controls src="'+x.url+'"></audio>'; }).join('');
-      return '<div class="n-card" data-z="'+escAttr(n.zone||'Sans zone')+'" data-u="'+escAttr(n.usage||'Sans usage')+'" data-c="'+(usageColor(n.usage)||'#8993A1')+'">'+
+      // fiche structurée : type (data-t) et champs (table.n-fields), relus tels quels par Studio Rapport ; data-id évite les doublons d'un import à l'autre
+      var et = EQUIP_TYPES[n.type], fl = equipFieldList(n);
+      return '<div class="n-card" data-id="'+escAttr(n.id)+'" data-z="'+escAttr(n.zone||'Sans zone')+'" data-u="'+escAttr(n.usage||'Sans usage')+'" data-c="'+(usageColor(n.usage)||'#8993A1')+'"'+(et? ' data-t="'+n.type+'"':'')+'>'+
         '<div class="n-head"><b>'+esc(n.title||'Sans titre')+'</b><span>'+fmtDateTime(n.ts)+'</span></div>'+
         '<div class="n-tags">'+[n.zone,n.usage].filter(Boolean).map(function(t){return '<span>'+esc(t)+'</span>';}).join('')+'</div>'+
+        (et? '<div class="n-type">'+esc(et.titre)+'</div>':'')+
+        (fl.length? '<table class="n-fields">'+fl.map(function(f){ return '<tr><th>'+esc(f[0])+'</th><td>'+esc(f[1])+'</td></tr>'; }).join('')+'</table>':'')+
         '<div class="n-text">'+esc(n.text||'')+'</div>'+
         (sketchImgs? '<div class="n-sketches">'+sketchImgs+'</div>':'')+
         (voiceEls? '<div class="n-voices">'+voiceEls+'</div>':'')+
@@ -1543,6 +1704,10 @@ function buildReportHtml(){
     '.n-head span{color:#8993A1;font-size:11px;font-family:monospace;}'+
     '.n-tags span{font-size:10px;background:#F5F7FA;border:1px solid #DCE2E9;border-radius:99px;padding:2px 8px;margin-right:6px;color:#5B6472;}'+
     '.n-text{font-size:13px;margin-top:6px;white-space:pre-wrap;}'+
+    '.n-type{display:inline-block;font-size:11px;font-weight:600;color:#1B4488;background:#DDE7F8;border-radius:99px;padding:2px 9px;margin-top:8px;}'+
+    'table.n-fields{width:auto;min-width:55%;margin-top:8px;border:none;border-radius:0;background:transparent;}'+
+    '.n-fields th{text-align:left;font-weight:500;color:#5B6472;padding:4px 16px 4px 0;font-size:12.5px;border-bottom:1px solid #EDF1F5;white-space:nowrap;vertical-align:top;}'+
+    '.n-fields td{padding:4px 0;font-size:13px;font-weight:600;border-bottom:1px solid #EDF1F5;}'+
     '.n-sketches{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}'+
     '.n-sketches img{width:140px;height:105px;object-fit:contain;border:1px solid #DCE2E9;border-radius:8px;background:#fff;}'+
     '.n-voices{margin-top:10px;}'+
@@ -1771,13 +1936,25 @@ function buildWorkbook(){
   });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(photoRows.length?photoRows:[{'N°':'','Zone':'','Usage':'','Commentaire':'','Date':'','Heure':''}]), 'Photos');
   var equipRows = state.equip.slice().reverse().map(function(n){
-    return { 'Équipement': n.title||'', 'Zone': n.zone||'', 'Usage': n.usage||'', 'Note': n.text||'', 'Schémas': (n.sketches||[]).length, 'Notes vocales': (n.voiceNotes||[]).length, 'Date': new Date(n.ts).toLocaleDateString('fr-FR') };
+    var et = EQUIP_TYPES[n.type];
+    return { 'Équipement': n.title||'', 'Type': et? et.titre:'', 'Zone': n.zone||'', 'Usage': n.usage||'', 'Caractéristiques': equipFieldList(n).map(function(f){ return f[0]+' : '+f[1]; }).join('\n'), 'Note': n.text||'', 'Schémas': (n.sketches||[]).length, 'Notes vocales': (n.voiceNotes||[]).length, 'Date': new Date(n.ts).toLocaleDateString('fr-FR') };
   });
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(equipRows.length?equipRows:[{'Équipement':'','Zone':'','Usage':'','Note':'','Schémas':'','Notes vocales':'','Date':''}]), 'Notes equipement');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(equipRows.length?equipRows:[{'Équipement':'','Type':'','Zone':'','Usage':'','Caractéristiques':'','Note':'','Schémas':'','Notes vocales':'','Date':''}]), 'Notes equipement');
   var todoRows = state.todos.slice().reverse().map(function(t){
     return { 'Action': t.text, 'Fait': t.done? 'Oui':'Non', 'Date': new Date(t.ts).toLocaleDateString('fr-FR') };
   });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(todoRows.length?todoRows:[{'Action':'','Fait':'','Date':''}]), 'Pense-bete');
+  // un onglet par type de fiche : une ligne par équipement, une colonne par champ (tri et filtre au bureau)
+  EQUIP_ORDER.forEach(function(k){
+    var t = EQUIP_TYPES[k];
+    var rows = state.equip.slice().reverse().filter(function(n){ return n.type===k; }).map(function(n){
+      var r = { 'Équipement': n.title||'', 'Zone': n.zone||'', 'Usage': n.usage||'' };
+      t.champs.forEach(function(c){ r[c] = (n.fields||{})[c] || ''; });
+      r['Observations'] = n.text||'';
+      return r;
+    });
+    if(rows.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Fiches '+t.titre);
+  });
   return XLSX.write(wb, {bookType:'xlsx', type:'array'});
 }
 
