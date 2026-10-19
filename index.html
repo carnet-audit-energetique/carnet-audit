@@ -540,7 +540,7 @@ input,textarea{font-family:inherit;}
     <div class="section-title" style="margin-top:0;">Prise en main</div>
     <ol class="help-steps">
       <li><span><strong>Visite</strong> — tapotez la pastille en haut pour créer ou changer de visite (site, date, auditeur). Photos et notes sont toujours rattachées à la visite active.</span></li>
-      <li><span><strong>Photo</strong> — bouton central de la barre du bas : choisissez d'abord la zone (« Modifier » retire celles dont vous n'avez pas besoin, « Nouvelle zone » en ajoute), l'appareil photo natif s'ouvre, puis classez par usage et commentaire.</span></li>
+      <li><span><strong>Photo</strong> — bouton central de la barre du bas : choisissez d'abord la zone (chaque visite a sa propre liste : « Modifier » retire celles dont vous n'avez pas besoin, « Nouvelle zone » en ajoute), l'appareil photo natif s'ouvre, puis classez par usage et commentaire.</span></li>
       <li><span><strong>Notes</strong> — onglet Notes : fiches équipement (avec schémas annotables et notes vocales), ou pense-bête à cocher au fur et à mesure. Choisissez le type de fiche (compresseur, chaudière, groupe froid…) : ses champs s'affichent avec les valeurs courantes à toucher, et chaque fiche devient une colonne du tableau d'équipements dans Studio Rapport. « Dupliquer » recopie une fiche pour la machine identique suivante.</span></li>
       <li><span><strong>Rapport</strong> — onglet Rapport : générez le rapport photo (HTML) et le fichier de données (Excel), ou sauvegardez sur Google Drive.</span></li>
     </ol>
@@ -820,8 +820,8 @@ var SK_COLORS = ['#1B222C','#2458B3','#C0392B','#2E7D5B','#E0A500'];
 
 /* ---------- indexeddb ---------- */
 var idb, state = {
-  visits:[], photos:[], equip:[], todos:[], zones:DEFAULT_ZONES.slice(), usages:DEFAULT_USAGES.slice(),
-  currentVisitId:null, driveParentFolderId:null, lockedUsage:{}, lastZoneUsed:{}
+  visits:[], photos:[], equip:[], todos:[], usages:DEFAULT_USAGES.slice(),
+  currentVisitId:null, driveParentFolderId:null, lockedUsage:{}, lastZoneUsed:{}, legacyZones:null
 };
 var objectUrls = {};
 try{ state.driveParentFolderId = localStorage.getItem('gdrive_parent_folder_id') || null; }catch(e){}
@@ -879,11 +879,11 @@ function toast(msg){
 /* ---------- meta / bootstrap ---------- */
 function loadMeta(){
   return getRec('meta','app').then(function(m){
-    if(m){ state.zones = m.zones||DEFAULT_ZONES.slice(); state.usages = m.usages||DEFAULT_USAGES.slice(); state.currentVisitId = m.currentVisitId||null; state.lockedUsage = m.lockedUsage||{}; state.lastZoneUsed = m.lastZoneUsed||{}; }
+    if(m){ state.legacyZones = m.zones||null; state.usages = m.usages||DEFAULT_USAGES.slice(); state.currentVisitId = m.currentVisitId||null; state.lockedUsage = m.lockedUsage||{}; state.lastZoneUsed = m.lastZoneUsed||{}; }
   });
 }
 function saveMeta(){
-  return putRec('meta', {key:'app', zones:state.zones, usages:state.usages, currentVisitId:state.currentVisitId, lockedUsage:state.lockedUsage, lastZoneUsed:state.lastZoneUsed});
+  return putRec('meta', {key:'app', usages:state.usages, currentVisitId:state.currentVisitId, lockedUsage:state.lockedUsage, lastZoneUsed:state.lastZoneUsed});
 }
 
 function loadVisitData(){
@@ -900,6 +900,28 @@ function loadVisitData(){
 }
 
 function currentVisit(){ return state.visits.find(function(v){return v.id===state.currentVisitId;}); }
+
+/* Zones : chaque visite a sa propre liste (v.zones), une nouvelle visite repart des zones par défaut */
+function curZones(){
+  var v = currentVisit();
+  if(!v) return DEFAULT_ZONES.slice();
+  if(!Array.isArray(v.zones)) v.zones = DEFAULT_ZONES.slice();
+  return v.zones;
+}
+function saveZones(){ var v = currentVisit(); return v ? putRec('visits', v) : Promise.resolve(); }
+function addZone(name){ var z = curZones(); if(z.indexOf(name)===-1){ z.push(name); saveZones(); } }
+/* Visites créées avant les listes par visite : liste commune d'alors + toutes les zones que la visite utilise déjà */
+function migrateVisitZones(){
+  var todo = state.visits.filter(function(v){ return !Array.isArray(v.zones); });
+  return Promise.all(todo.map(function(v){
+    return Promise.all([getAllBy('photos', v.id), getAllBy('equip', v.id)]).then(function(r){
+      var zones = (state.legacyZones || DEFAULT_ZONES).slice();
+      r[0].concat(r[1]).forEach(function(x){ if(x.zone && zones.indexOf(x.zone)===-1) zones.push(x.zone); });
+      v.zones = zones;
+      return putRec('visits', v);
+    });
+  })).then(function(){ state.legacyZones = null; });
+}
 
 /* ---------- render: header ---------- */
 function renderHeader(){
@@ -1029,19 +1051,19 @@ function emptyState(kind, title, sub){
 }
 
 /* ---------- zone picker (its own view, opened before the camera) ---------- */
-var pendingZone = null, zoneEditMode = false, zonesRemoved = [];
+var pendingZone = null, zoneEditMode = false, zonesRemoved = [], zoneEditVisit = null;
 var ZONE_X_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
-function zoneChoices(current){ return current && state.zones.indexOf(current)===-1 ? state.zones.concat([current]) : state.zones; }
+function zoneChoices(current){ var z = curZones(); return current && z.indexOf(current)===-1 ? z.concat([current]) : z; }
 function removeZone(i){
-  var name = state.zones.splice(i,1)[0];
+  var name = curZones().splice(i,1)[0];
   zonesRemoved.push({name:name, index:i});
-  Object.keys(state.lastZoneUsed||{}).forEach(function(k){ if(state.lastZoneUsed[k]===name) delete state.lastZoneUsed[k]; });
-  saveMeta(); renderZonePickerList();
+  if(state.lastZoneUsed && state.lastZoneUsed[state.currentVisitId]===name){ delete state.lastZoneUsed[state.currentVisitId]; saveMeta(); }
+  saveZones(); renderZonePickerList();
 }
 function restoreZone(k){
-  var r = zonesRemoved.splice(k,1)[0];
-  if(state.zones.indexOf(r.name)===-1) state.zones.splice(Math.min(r.index, state.zones.length), 0, r.name);
-  saveMeta(); renderZonePickerList();
+  var r = zonesRemoved.splice(k,1)[0], z = curZones();
+  if(z.indexOf(r.name)===-1) z.splice(Math.min(r.index, z.length), 0, r.name);
+  saveZones(); renderZonePickerList();
 }
 function renderZonesRemoved(){
   var box = document.getElementById('zoneRemoved'); box.innerHTML='';
@@ -1058,6 +1080,7 @@ function renderZonesRemoved(){
   box.appendChild(hint); box.appendChild(row);
 }
 function renderZonePickerList(){
+  if(zoneEditVisit !== state.currentVisitId){ zoneEditVisit = state.currentVisitId; zoneEditMode = false; zonesRemoved = []; }
   var wrap = document.getElementById('zonePickerList'); wrap.innerHTML='';
   var recent = state.lastZoneUsed && state.lastZoneUsed[state.currentVisitId];
   var editBtn = document.getElementById('btnZoneEdit');
@@ -1065,9 +1088,9 @@ function renderZonePickerList(){
   editBtn.classList.toggle('on', zoneEditMode);
   wrap.classList.toggle('editing', zoneEditMode);
   document.getElementById('zonePickerHint').textContent = zoneEditMode
-    ? "Touchez une zone pour la retirer de la liste. Les photos déjà prises restent classées dans leur zone."
+    ? "Touchez une zone pour la retirer de cette visite. Les photos déjà prises restent classées dans leur zone."
     : "Touchez une zone pour ouvrir directement l'appareil photo.";
-  state.zones.forEach(function(z, i){
+  curZones().forEach(function(z, i){
     var isRecent = !zoneEditMode && z===recent;
     var tile = document.createElement('div'); tile.className='zone-pick-tile'+(isRecent?' recent':'');
     tile.innerHTML = '<span>'+esc(z)+'</span>'+(isRecent?'<span class="zone-pick-tag">Dernière</span>':'')+(zoneEditMode?'<span class="zone-pick-x">'+ZONE_X_ICON+'</span>':'');
@@ -1084,7 +1107,7 @@ function renderZonePickerList(){
     add.replaceWith(wrap2); input.focus();
     function commit(){
       var v = input.value.trim(); if(!v) return;
-      if(state.zones.indexOf(v)===-1){ state.zones.push(v); saveMeta(); }
+      addZone(v);
       renderZonePickerList();
       if(!zoneEditMode) chooseZoneAndShoot(v);
     }
@@ -1163,7 +1186,7 @@ function openDetail(id){
   function draw(){
     renderChipRow(document.getElementById('detailZones'), zoneChoices(ph.zone), ph.zone, {
       onSelect:function(v){ ph.zone=v; putRec('photos', ph); draw(); },
-      onAdd:function(v){ state.zones.push(v); saveMeta(); ph.zone=v; putRec('photos', ph); draw(); }
+      onAdd:function(v){ addZone(v); ph.zone=v; putRec('photos', ph); draw(); }
     });
     renderChipRow(document.getElementById('detailUsages'), state.usages, ph.usage, {
       onSelect:function(v){ ph.usage=v; putRec('photos', ph); draw(); },
@@ -1442,7 +1465,7 @@ function openEquipEditor(id, draft){
   function pickUsage(v){ n.usage=v; if(!typeTouched && !anyField()){ type = equipTypeFor(v); renderTypes(); renderFields(); } draw(); }
   function draw(){
     renderChipRow(document.getElementById('equipZones'), zoneChoices(n.zone), n.zone, {
-      onSelect:function(v){ n.zone=v; draw(); renderFields(); }, onAdd:function(v){ state.zones.push(v); saveMeta(); n.zone=v; draw(); renderFields(); }
+      onSelect:function(v){ n.zone=v; draw(); renderFields(); }, onAdd:function(v){ addZone(v); n.zone=v; draw(); renderFields(); }
     });
     renderChipRow(document.getElementById('equipUsages'), state.usages, n.usage, {
       onSelect:pickUsage,
@@ -1635,7 +1658,7 @@ function renderVisitSheet(){
 }
 function switchVisit(id){
   state.currentVisitId = id; saveMeta().then(function(){ return loadVisitData(); }).then(function(){
-    renderHeader(); renderHome(); renderEquip(); renderTodos(); closeVisitSheet();
+    renderHeader(); renderHome(); renderEquip(); renderTodos(); renderZonePickerList(); closeVisitSheet();
   });
 }
 function deleteVisit(id){
@@ -1651,7 +1674,7 @@ function deleteVisit(id){
     state.visits = state.visits.filter(function(v){return v.id!==id;});
     if(state.currentVisitId===id) state.currentVisitId = state.visits[0] ? state.visits[0].id : null;
     saveMeta().then(function(){ return loadVisitData(); }).then(function(){
-      renderHeader(); renderHome(); renderEquip(); renderTodos(); renderVisitSheet();
+      renderHeader(); renderHome(); renderEquip(); renderTodos(); renderZonePickerList(); renderVisitSheet();
       if(!state.currentVisitId) openVisitSheet();
     });
   });
@@ -1660,12 +1683,12 @@ document.getElementById('btnCreateVisit').addEventListener('click', function(){
   var site = document.getElementById('newSite').value.trim();
   if(!site){ toast('Indiquez un nom de site'); return; }
   var v = { id:uid(), site:site, date:document.getElementById('newDate').value || new Date().toISOString().slice(0,10),
-    auditeur:document.getElementById('newAuditeur').value.trim(), createdAt:Date.now() };
+    auditeur:document.getElementById('newAuditeur').value.trim(), createdAt:Date.now(), zones:DEFAULT_ZONES.slice() };
   putRec('visits', v).then(function(){
     state.visits.push(v); state.currentVisitId = v.id;
     return saveMeta();
   }).then(function(){ return loadVisitData(); }).then(function(){
-    renderHeader(); renderHome(); renderEquip(); renderTodos(); closeVisitSheet(); toast('Visite créée ✓');
+    renderHeader(); renderHome(); renderEquip(); renderTodos(); renderZonePickerList(); closeVisitSheet(); toast('Visite créée ✓');
   });
 });
 
@@ -2273,6 +2296,8 @@ openDB().then(function(db){
   return Promise.all([loadMeta(), getAllRecs('visits')]);
 }).then(function(r){
   state.visits = r[1];
+  return migrateVisitZones();
+}).then(function(){
   return loadVisitData();
 }).then(function(){
   renderHeader(); renderHome(); renderEquip(); renderTodos();
