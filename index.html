@@ -283,15 +283,18 @@ input,textarea{font-family:inherit;}
 }
 .zone-pick-tile{position:relative;}
 .zone-pick-tile:active{transform:scale(.97);}
-.zone-edit-btn{
+.list-edit-btn{
   text-transform:none; letter-spacing:0; font-family:var(--font-body); font-size:13px; font-weight:600;
   padding:8px 14px; border-radius:999px; background:var(--surface); border:1px solid var(--line-strong); color:var(--accent-ink); cursor:pointer;
 }
-.zone-edit-btn.on{background:var(--accent); border-color:var(--accent); color:var(--on-accent);}
+.list-edit-btn.on{background:var(--accent); border-color:var(--accent); color:var(--on-accent);}
+.chip.editing{border-color:var(--danger); background:color-mix(in srgb, var(--danger) 5%, var(--surface-2));}
+.chip-x{display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; margin-left:2px; border-radius:50%; background:var(--danger-soft); color:var(--danger);}
+.chip-x svg{width:9px; height:9px;}
 .zone-pick-grid.editing .zone-pick-tile{border-color:var(--danger); background:color-mix(in srgb, var(--danger) 5%, var(--surface)); padding-right:28px;}
 .zone-pick-x{position:absolute; top:6px; right:6px; width:20px; height:20px; border-radius:50%; background:var(--danger-soft); color:var(--danger); display:flex; align-items:center; justify-content:center;}
 .zone-pick-x svg{width:11px; height:11px;}
-.zone-removed{margin-top:20px;}
+.list-removed{margin-top:20px;}
 .zone-pick-tile.recent{border-color:var(--accent); background:color-mix(in srgb, var(--accent) 8%, var(--surface));}
 .zone-pick-tag{font-family:var(--font-mono); font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; padding:2px 8px; border-radius:999px; background:var(--accent-soft); color:var(--accent-ink);}
 .zone-pick-add{
@@ -475,7 +478,7 @@ input,textarea{font-family:inherit;}
 
     <div class="report-card">
       <h3>Sauvegarde Google Drive</h3>
-      <p>Crée (ou met à jour) un dossier pour cette visite dans votre Drive, avec les photos, les schémas et le rapport à jour. À faire quand vous retrouvez du réseau — pas besoin sur site.</p>
+      <p>Crée (ou met à jour) un dossier pour cette visite dans votre Drive : les photos y sont rangées dans un sous-dossier par usage énergétique, avec les schémas et le rapport à jour. À faire quand vous retrouvez du réseau — pas besoin sur site.</p>
       <div class="drive-status off" id="driveStatus"><span class="dot"></span><span id="driveStatusText">Google Drive non configuré</span></div>
       <div class="btn-row">
         <button class="btn primary" id="btnDriveSync">
@@ -492,11 +495,11 @@ input,textarea{font-family:inherit;}
   <div class="view" id="view-zonepicker">
     <div class="section-title" style="margin-top:0;">
       <span>Choisir la zone</span>
-      <button type="button" class="zone-edit-btn" id="btnZoneEdit">Modifier</button>
+      <button type="button" class="list-edit-btn" id="btnZoneEdit">Modifier</button>
     </div>
     <p class="hint" id="zonePickerHint" style="margin-bottom:14px;">Touchez une zone pour ouvrir directement l'appareil photo.</p>
     <div class="zone-pick-grid" id="zonePickerList"></div>
-    <div class="zone-removed" id="zoneRemoved" style="display:none;"></div>
+    <div class="list-removed" id="zoneRemoved" style="display:none;"></div>
   </div>
 
   <input type="file" accept="image/*" capture="environment" id="cameraInput" style="display:none;">
@@ -540,7 +543,7 @@ input,textarea{font-family:inherit;}
     <div class="section-title" style="margin-top:0;">Prise en main</div>
     <ol class="help-steps">
       <li><span><strong>Visite</strong> — tapotez la pastille en haut pour créer ou changer de visite (site, date, auditeur). Photos et notes sont toujours rattachées à la visite active.</span></li>
-      <li><span><strong>Photo</strong> — bouton central de la barre du bas : choisissez d'abord la zone (chaque visite a sa propre liste : « Modifier » retire celles dont vous n'avez pas besoin, « Nouvelle zone » en ajoute), l'appareil photo natif s'ouvre, puis classez par usage et commentaire.</span></li>
+      <li><span><strong>Photo</strong> — bouton central de la barre du bas : choisissez d'abord la zone (chaque visite a sa propre liste : « Modifier » retire celles dont vous n'avez pas besoin, « Nouvelle zone » en ajoute), l'appareil photo natif s'ouvre, puis classez par usage et commentaire. La liste des usages se modifie de la même façon (« Modifier » à côté de « Usage / poste énergétique »), elle aussi propre à chaque visite.</span></li>
       <li><span><strong>Notes</strong> — onglet Notes : fiches équipement (avec schémas annotables et notes vocales), ou pense-bête à cocher au fur et à mesure. Choisissez le type de fiche (compresseur, chaudière, groupe froid…) : ses champs s'affichent avec les valeurs courantes à toucher, et chaque fiche devient une colonne du tableau d'équipements dans Studio Rapport. « Dupliquer » recopie une fiche pour la machine identique suivante.</span></li>
       <li><span><strong>Rapport</strong> — onglet Rapport : générez le rapport photo (HTML) et le fichier de données (Excel), ou sauvegardez sur Google Drive.</span></li>
     </ol>
@@ -763,6 +766,7 @@ var DEFAULT_USAGES = [
   {label:'Bureautique / Informatique', color:'#5B6472'}
 ];
 var EXTRA_COLORS = ['#4E6EF2','#C2410C','#0891B2','#65A30D','#9333EA','#B45309'];
+var DEFAULT_USAGE_LABELS = DEFAULT_USAGES.map(function(u){ return u.label; });
 var QUICK_FIELDS = ['Puissance','Débit','Pression','Température','Année / marque','Régime horaire','État'];
 /* Fiches équipement : mêmes gabarits que les tableaux d'équipements de Studio Rapport (js/ingest.js, Model.EQUIP).
    Un libellé modifié ici doit l'être aussi là-bas, sinon le champ arrive dans Studio en ligne supplémentaire. */
@@ -820,9 +824,10 @@ var SK_COLORS = ['#1B222C','#2458B3','#C0392B','#2E7D5B','#E0A500'];
 
 /* ---------- indexeddb ---------- */
 var idb, state = {
-  visits:[], photos:[], equip:[], todos:[], usages:DEFAULT_USAGES.slice(),
-  currentVisitId:null, driveParentFolderId:null, lockedUsage:{}, lastZoneUsed:{}, legacyZones:null
+  visits:[], photos:[], equip:[], todos:[], usageColors:{},
+  currentVisitId:null, driveParentFolderId:null, lockedUsage:{}, lastZoneUsed:{}, legacyZones:null, legacyUsages:null
 };
+DEFAULT_USAGES.forEach(function(u){ state.usageColors[u.label] = u.color; });
 var objectUrls = {};
 try{ state.driveParentFolderId = localStorage.getItem('gdrive_parent_folder_id') || null; }catch(e){}
 
@@ -879,11 +884,18 @@ function toast(msg){
 /* ---------- meta / bootstrap ---------- */
 function loadMeta(){
   return getRec('meta','app').then(function(m){
-    if(m){ state.legacyZones = m.zones||null; state.usages = m.usages||DEFAULT_USAGES.slice(); state.currentVisitId = m.currentVisitId||null; state.lockedUsage = m.lockedUsage||{}; state.lastZoneUsed = m.lastZoneUsed||{}; }
+    if(m){
+      state.legacyZones = m.zones||null;
+      // ancienne liste commune d'usages [{label,color}] : ses couleurs rejoignent le registre, ses libellés servent de point de départ aux visites existantes
+      state.legacyUsages = m.usages ? m.usages.map(function(u){ return u.label; }) : null;
+      (m.usages||[]).forEach(function(u){ if(u && u.label && u.color) state.usageColors[u.label] = u.color; });
+      Object.assign(state.usageColors, m.usageColors||{});
+      state.currentVisitId = m.currentVisitId||null; state.lockedUsage = m.lockedUsage||{}; state.lastZoneUsed = m.lastZoneUsed||{};
+    }
   });
 }
 function saveMeta(){
-  return putRec('meta', {key:'app', usages:state.usages, currentVisitId:state.currentVisitId, lockedUsage:state.lockedUsage, lastZoneUsed:state.lastZoneUsed});
+  return putRec('meta', {key:'app', usageColors:state.usageColors, currentVisitId:state.currentVisitId, lockedUsage:state.lockedUsage, lastZoneUsed:state.lastZoneUsed});
 }
 
 function loadVisitData(){
@@ -901,26 +913,45 @@ function loadVisitData(){
 
 function currentVisit(){ return state.visits.find(function(v){return v.id===state.currentVisitId;}); }
 
-/* Zones : chaque visite a sa propre liste (v.zones), une nouvelle visite repart des zones par défaut */
+/* Zones et usages : chaque visite a ses propres listes (v.zones, v.usages), une nouvelle visite repart des valeurs par défaut.
+   Les couleurs des usages vivent dans un registre commun (state.usageColors) : retirer un usage d'une visite ne change pas la couleur des photos qui l'utilisent. */
 function curZones(){
   var v = currentVisit();
   if(!v) return DEFAULT_ZONES.slice();
   if(!Array.isArray(v.zones)) v.zones = DEFAULT_ZONES.slice();
   return v.zones;
 }
-function saveZones(){ var v = currentVisit(); return v ? putRec('visits', v) : Promise.resolve(); }
-function addZone(name){ var z = curZones(); if(z.indexOf(name)===-1){ z.push(name); saveZones(); } }
-/* Visites créées avant les listes par visite : liste commune d'alors + toutes les zones que la visite utilise déjà */
-function migrateVisitZones(){
-  var todo = state.visits.filter(function(v){ return !Array.isArray(v.zones); });
+function curUsages(){
+  var v = currentVisit();
+  if(!v) return DEFAULT_USAGE_LABELS.slice();
+  if(!Array.isArray(v.usages)) v.usages = DEFAULT_USAGE_LABELS.slice();
+  return v.usages;
+}
+function saveVisitLists(){ var v = currentVisit(); return v ? putRec('visits', v) : Promise.resolve(); }
+function addZone(name){ var z = curZones(); if(z.indexOf(name)===-1){ z.push(name); saveVisitLists(); } }
+function addUsage(label){
+  if(!state.usageColors[label]){ state.usageColors[label] = EXTRA_COLORS[Object.keys(state.usageColors).length % EXTRA_COLORS.length]; saveMeta(); }
+  var u = curUsages(); if(u.indexOf(label)===-1){ u.push(label); saveVisitLists(); }
+}
+/* Visites créées avant les listes par visite : liste commune d'alors + tout ce que la visite utilise déjà */
+function migrateVisitLists(){
+  var todo = state.visits.filter(function(v){ return !Array.isArray(v.zones) || !Array.isArray(v.usages); });
   return Promise.all(todo.map(function(v){
     return Promise.all([getAllBy('photos', v.id), getAllBy('equip', v.id)]).then(function(r){
-      var zones = (state.legacyZones || DEFAULT_ZONES).slice();
-      r[0].concat(r[1]).forEach(function(x){ if(x.zone && zones.indexOf(x.zone)===-1) zones.push(x.zone); });
-      v.zones = zones;
+      var used = r[0].concat(r[1]);
+      if(!Array.isArray(v.zones)){
+        var zones = (state.legacyZones || DEFAULT_ZONES).slice();
+        used.forEach(function(x){ if(x.zone && zones.indexOf(x.zone)===-1) zones.push(x.zone); });
+        v.zones = zones;
+      }
+      if(!Array.isArray(v.usages)){
+        var usages = (state.legacyUsages && state.legacyUsages.length ? state.legacyUsages : DEFAULT_USAGE_LABELS).slice();
+        used.forEach(function(x){ if(x.usage && usages.indexOf(x.usage)===-1) usages.push(x.usage); });
+        v.usages = usages;
+      }
       return putRec('visits', v);
     });
-  })).then(function(){ state.legacyZones = null; });
+  })).then(function(){ state.legacyZones = null; state.legacyUsages = null; });
 }
 
 /* ---------- render: header ---------- */
@@ -936,10 +967,10 @@ function fmtTime(ts){ return new Date(ts).toLocaleTimeString('fr-FR', {hour:'2-d
 function fmtDateTime(ts){ return new Date(ts).toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit', year:'numeric'}) + ' ' + fmtTime(ts); }
 
 /* ---------- chips ---------- */
-function usageColor(label){
-  var u = state.usages.find(function(x){return x.label===label;});
-  return u ? u.color : null;
-}
+var X_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+function usageColor(label){ return state.usageColors[label] || null; }
+function usageItems(labels){ return labels.map(function(l){ return {label:l, color:usageColor(l)||'#5B6472'}; }); }
+function usageChoices(current){ var u = curUsages(); return current && u.indexOf(current)===-1 ? u.concat([current]) : u; }
 function renderChipRow(container, items, selected, opts){
   opts = opts||{};
   container.innerHTML='';
@@ -947,10 +978,10 @@ function renderChipRow(container, items, selected, opts){
     var label = typeof item==='string' ? item : item.label;
     var color = typeof item==='string' ? null : item.color;
     var chip = document.createElement('div');
-    chip.className = 'chip' + (color? ' usage':'') + (selected===label?' selected':'');
+    chip.className = 'chip' + (color? ' usage':'') + (selected===label?' selected':'') + (opts.editMode?' editing':'');
     if(color) chip.style.setProperty('--c', color);
-    chip.innerHTML = (color? '<span class="dot" style="--c:'+color+'"></span>':'') + esc(label);
-    chip.addEventListener('click', function(){ opts.onSelect(selected===label ? null : label); });
+    chip.innerHTML = (color? '<span class="dot" style="--c:'+color+'"></span>':'') + esc(label) + (opts.editMode ? '<span class="chip-x">'+X_ICON+'</span>' : '');
+    chip.addEventListener('click', function(){ if(opts.editMode) opts.onRemove(label); else opts.onSelect(selected===label ? null : label); });
     container.appendChild(chip);
   });
   var addChip = document.createElement('div');
@@ -971,6 +1002,49 @@ function promptAddChip(container, items, selected, opts){
   }
   go.addEventListener('click', commit);
   input.addEventListener('keydown', function(e){ if(e.key==='Enter') commit(); });
+}
+/* Éléments retirés pendant la séance de modification : un toucher les remet à leur place (zones et usages) */
+function renderRemovedChips(box, removed, hintText, onRestore){
+  box.innerHTML='';
+  if(!removed.length){ box.style.display='none'; return; }
+  box.style.display='block';
+  var hint = document.createElement('div'); hint.className='hint'; hint.style.marginBottom='8px'; hint.textContent = hintText;
+  var row = document.createElement('div'); row.className='chip-row';
+  removed.forEach(function(r, k){
+    var c = document.createElement('div'); c.className='chip'; c.textContent = '↺ '+r.name;
+    c.addEventListener('click', function(){ onRestore(k); });
+    row.appendChild(c);
+  });
+  box.appendChild(hint); box.appendChild(row);
+}
+/* Usage / poste énergétique : liste de la visite, avec « Modifier » (retirer / remettre) comme pour les zones.
+   Une seule rangée est ouverte à la fois (fiche photo, classement, fiche équipement) : l'état de modification est commun. */
+var usageEdit = {on:false, removed:[]};
+function renderUsageRow(rowEl, selected, o){
+  var title = rowEl.previousElementSibling, btn = title.querySelector('.list-edit-btn');
+  if(!btn){ btn = document.createElement('button'); btn.type='button'; btn.className='list-edit-btn'; title.appendChild(btn); }
+  btn.textContent = usageEdit.on ? 'Terminé' : 'Modifier';
+  btn.classList.toggle('on', usageEdit.on);
+  btn.onclick = function(){ usageEdit.on = !usageEdit.on; usageEdit.removed = []; o.redraw(); };
+  renderChipRow(rowEl, usageItems(usageEdit.on ? curUsages() : usageChoices(selected)), usageEdit.on ? null : selected, {
+    editMode: usageEdit.on,
+    onSelect: o.onSelect,
+    onRemove: function(label){
+      var u = curUsages(), i = u.indexOf(label);
+      usageEdit.removed.push({name:label, index:i}); u.splice(i,1);
+      if(state.lockedUsage[state.currentVisitId]===label){ delete state.lockedUsage[state.currentVisitId]; saveMeta(); }
+      saveVisitLists();
+      if(o.dropOnRemove && selected===label) o.onSelect(null); else o.redraw();
+    },
+    onAdd: function(label){ addUsage(label); if(usageEdit.on) o.redraw(); else o.onSelect(label); }
+  });
+  var box = rowEl.nextElementSibling;
+  if(!box || !box.classList.contains('list-removed')){ box = document.createElement('div'); box.className='list-removed'; rowEl.parentNode.insertBefore(box, rowEl.nextSibling); }
+  renderRemovedChips(box, usageEdit.on ? usageEdit.removed : [], 'Retirés à l’instant — touchez pour remettre', function(k){
+    var r = usageEdit.removed.splice(k,1)[0], u = curUsages();
+    if(u.indexOf(r.name)===-1) u.splice(Math.min(r.index, u.length), 0, r.name);
+    saveVisitLists(); o.redraw();
+  });
 }
 function esc(s){ var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 function escAttr(s){ return esc(s).replace(/"/g,'&quot;'); }
@@ -1052,32 +1126,20 @@ function emptyState(kind, title, sub){
 
 /* ---------- zone picker (its own view, opened before the camera) ---------- */
 var pendingZone = null, zoneEditMode = false, zonesRemoved = [], zoneEditVisit = null;
-var ZONE_X_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 function zoneChoices(current){ var z = curZones(); return current && z.indexOf(current)===-1 ? z.concat([current]) : z; }
 function removeZone(i){
   var name = curZones().splice(i,1)[0];
   zonesRemoved.push({name:name, index:i});
   if(state.lastZoneUsed && state.lastZoneUsed[state.currentVisitId]===name){ delete state.lastZoneUsed[state.currentVisitId]; saveMeta(); }
-  saveZones(); renderZonePickerList();
+  saveVisitLists(); renderZonePickerList();
 }
 function restoreZone(k){
   var r = zonesRemoved.splice(k,1)[0], z = curZones();
   if(z.indexOf(r.name)===-1) z.splice(Math.min(r.index, z.length), 0, r.name);
-  saveZones(); renderZonePickerList();
+  saveVisitLists(); renderZonePickerList();
 }
 function renderZonesRemoved(){
-  var box = document.getElementById('zoneRemoved'); box.innerHTML='';
-  if(!zoneEditMode || !zonesRemoved.length){ box.style.display='none'; return; }
-  box.style.display='block';
-  var hint = document.createElement('div'); hint.className='hint'; hint.style.marginBottom='8px';
-  hint.textContent = 'Retirées à l’instant — touchez pour remettre';
-  var row = document.createElement('div'); row.className='chip-row';
-  zonesRemoved.forEach(function(r, k){
-    var c = document.createElement('div'); c.className='chip'; c.textContent = '↺ '+r.name;
-    c.addEventListener('click', function(){ restoreZone(k); });
-    row.appendChild(c);
-  });
-  box.appendChild(hint); box.appendChild(row);
+  renderRemovedChips(document.getElementById('zoneRemoved'), zoneEditMode ? zonesRemoved : [], 'Retirées à l’instant — touchez pour remettre', restoreZone);
 }
 function renderZonePickerList(){
   if(zoneEditVisit !== state.currentVisitId){ zoneEditVisit = state.currentVisitId; zoneEditMode = false; zonesRemoved = []; }
@@ -1093,7 +1155,7 @@ function renderZonePickerList(){
   curZones().forEach(function(z, i){
     var isRecent = !zoneEditMode && z===recent;
     var tile = document.createElement('div'); tile.className='zone-pick-tile'+(isRecent?' recent':'');
-    tile.innerHTML = '<span>'+esc(z)+'</span>'+(isRecent?'<span class="zone-pick-tag">Dernière</span>':'')+(zoneEditMode?'<span class="zone-pick-x">'+ZONE_X_ICON+'</span>':'');
+    tile.innerHTML = '<span>'+esc(z)+'</span>'+(isRecent?'<span class="zone-pick-tag">Dernière</span>':'')+(zoneEditMode?'<span class="zone-pick-x">'+X_ICON+'</span>':'');
     tile.addEventListener('click', function(){ if(zoneEditMode) removeZone(i); else chooseZoneAndShoot(z); });
     wrap.appendChild(tile);
   });
@@ -1139,10 +1201,10 @@ function openTagOverlay(blob){
   document.getElementById('commentField').style.display='none';
   setCommentToggleLabel('');
   var selUsage = state.lockedUsage[state.currentVisitId] || null;
+  usageEdit.on = false; usageEdit.removed = [];
   function draw(){
-    renderChipRow(document.getElementById('tagUsages'), state.usages, selUsage, {
-      onSelect:function(v){ selUsage=v; draw(); },
-      onAdd:function(v){ state.usages.push({label:v, color:EXTRA_COLORS[state.usages.length % EXTRA_COLORS.length]}); saveMeta(); selUsage=v; draw(); }
+    renderUsageRow(document.getElementById('tagUsages'), selUsage, {
+      onSelect:function(v){ selUsage=v; draw(); }, redraw:draw, dropOnRemove:true
     });
   }
   draw();
@@ -1183,14 +1245,14 @@ function openDetail(id){
   document.getElementById('detailImg').src = urlFor(ph.id, ph.blob);
   document.getElementById('detailComment').value = ph.comment||'';
   document.getElementById('detailMeta').textContent = 'Prise le ' + fmtDateTime(ph.ts);
+  usageEdit.on = false; usageEdit.removed = [];
   function draw(){
     renderChipRow(document.getElementById('detailZones'), zoneChoices(ph.zone), ph.zone, {
       onSelect:function(v){ ph.zone=v; putRec('photos', ph); draw(); },
       onAdd:function(v){ addZone(v); ph.zone=v; putRec('photos', ph); draw(); }
     });
-    renderChipRow(document.getElementById('detailUsages'), state.usages, ph.usage, {
-      onSelect:function(v){ ph.usage=v; putRec('photos', ph); draw(); },
-      onAdd:function(v){ state.usages.push({label:v, color:EXTRA_COLORS[state.usages.length % EXTRA_COLORS.length]}); saveMeta(); ph.usage=v; putRec('photos', ph); draw(); }
+    renderUsageRow(document.getElementById('detailUsages'), ph.usage, {
+      onSelect:function(v){ ph.usage=v; putRec('photos', ph); draw(); }, redraw:draw
     });
   }
   draw();
@@ -1436,6 +1498,7 @@ function openEquipEditor(id, draft){
   n.sketches = n.sketches || [];
   n.voiceNotes = n.voiceNotes || [];
   n._persisted = !!id;
+  usageEdit.on = false; usageEdit.removed = [];
   // type de fiche et champs : copie de travail, reportée dans la note à l'enregistrement
   var type = id || draft ? (EQUIP_TYPES[n.type] ? n.type : '') : equipTypeFor(n.usage);
   var typeTouched = !!(id || draft);
@@ -1467,10 +1530,7 @@ function openEquipEditor(id, draft){
     renderChipRow(document.getElementById('equipZones'), zoneChoices(n.zone), n.zone, {
       onSelect:function(v){ n.zone=v; draw(); renderFields(); }, onAdd:function(v){ addZone(v); n.zone=v; draw(); renderFields(); }
     });
-    renderChipRow(document.getElementById('equipUsages'), state.usages, n.usage, {
-      onSelect:pickUsage,
-      onAdd:function(v){ state.usages.push({label:v, color:EXTRA_COLORS[state.usages.length % EXTRA_COLORS.length]}); saveMeta(); pickUsage(v); }
-    });
+    renderUsageRow(document.getElementById('equipUsages'), n.usage, { onSelect:pickUsage, redraw:draw });
   }
   function renderTypes(){
     var wrap = document.getElementById('equipTypes'); wrap.innerHTML='';
@@ -1683,7 +1743,7 @@ document.getElementById('btnCreateVisit').addEventListener('click', function(){
   var site = document.getElementById('newSite').value.trim();
   if(!site){ toast('Indiquez un nom de site'); return; }
   var v = { id:uid(), site:site, date:document.getElementById('newDate').value || new Date().toISOString().slice(0,10),
-    auditeur:document.getElementById('newAuditeur').value.trim(), createdAt:Date.now(), zones:DEFAULT_ZONES.slice() };
+    auditeur:document.getElementById('newAuditeur').value.trim(), createdAt:Date.now(), zones:DEFAULT_ZONES.slice(), usages:DEFAULT_USAGE_LABELS.slice() };
   putRec('visits', v).then(function(){
     state.visits.push(v); state.currentVisitId = v.id;
     return saveMeta();
@@ -2137,12 +2197,12 @@ function driveEnsureFolder(cachedId, name, parentId){
   var check = cachedId ? driveEntryValid(cachedId, parentId) : Promise.resolve(false);
   return check.then(function(usable){ return usable ? cachedId : driveFindOrCreateFolder(name, parentId); });
 }
-function driveZoneFolderId(v, zone, visitFolderId){
-  v.driveZoneFolders = v.driveZoneFolders || {};
-  var key = zone || 'Sans zone';
-  return driveEnsureFolder(v.driveZoneFolders[key], key, visitFolderId).then(function(id){
-    if(id === v.driveZoneFolders[key]) return id;
-    v.driveZoneFolders[key] = id;
+function driveUsageFolderId(v, usage, visitFolderId){
+  v.driveUsageFolders = v.driveUsageFolders || {};
+  var key = usage || 'Sans usage';
+  return driveEnsureFolder(v.driveUsageFolders[key], key, visitFolderId).then(function(id){
+    if(id === v.driveUsageFolders[key]) return id;
+    v.driveUsageFolders[key] = id;
     return putRec('visits', v).then(function(){ return id; });
   });
 }
@@ -2219,10 +2279,10 @@ function syncVisitToDrive(){
     var chain = Promise.resolve();
     toPhotos.forEach(function(ph, i){
       chain = chain.then(function(){
-        return driveZoneFolderId(v, ph.zone, folderId);
-      }).then(function(zoneFolderId){
-        var name = String(i+1).padStart(3,'0')+'_'+slug(ph.usage||'usage')+'_'+fmtTime(ph.ts).replace(':','h')+'.jpg';
-        return driveUploadCreate(name, ph.blob, 'image/jpeg', zoneFolderId).then(function(){ ph.driveSynced = true; return putRec('photos', ph); }).then(function(){ step('Photos'); });
+        return driveUsageFolderId(v, ph.usage, folderId);
+      }).then(function(usageFolderId){
+        var name = String(i+1).padStart(3,'0')+'_'+slug(ph.zone||'zone')+'_'+fmtTime(ph.ts).replace(':','h')+'.jpg';
+        return driveUploadCreate(name, ph.blob, 'image/jpeg', usageFolderId).then(function(){ ph.driveSynced = true; return putRec('photos', ph); }).then(function(){ step('Photos'); });
       });
     });
     toSketches.forEach(function(item){
@@ -2296,7 +2356,7 @@ openDB().then(function(db){
   return Promise.all([loadMeta(), getAllRecs('visits')]);
 }).then(function(r){
   state.visits = r[1];
-  return migrateVisitZones();
+  return migrateVisitLists();
 }).then(function(){
   return loadVisitData();
 }).then(function(){
