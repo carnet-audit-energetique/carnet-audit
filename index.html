@@ -383,6 +383,60 @@ input,textarea{font-family:inherit;}
 .note-fields{display:grid; grid-template-columns:auto 1fr; gap:3px 12px; font-size:12.5px; margin:6px 0 4px;}
 .note-fields dt{color:var(--ink-soft);}
 .note-fields dd{margin:0; font-weight:500; overflow-wrap:anywhere;}
+
+/* ---------- notes libres / équipements (plaques signalétiques) ---------- */
+.stats-row.four{grid-template-columns:repeat(4,1fr); gap:8px;}
+.stats-row.four .stat-tile{padding:12px 4px;}
+.stats-row.four .stat-tile .lbl{font-size:10px; letter-spacing:.03em;}
+#overlayEquip .overlay-body{display:flex; flex-direction:column;}
+#overlayEquip .blk{flex:none; margin-bottom:22px;}
+#overlayEquip .blk > .section-title:first-child{margin-top:0;}
+#overlayEquip[data-mode="note"] .only-equip{display:none !important;}
+#overlayEquip[data-mode="equip"] .only-note{display:none !important;}
+#overlayEquip[data-mode="note"] .blk-name{order:1;}
+#overlayEquip[data-mode="note"] .blk-text{order:2;}
+#overlayEquip[data-mode="note"] .blk-usage{order:3;}
+#overlayEquip[data-mode="note"] .blk-zone{order:4;}
+#overlayEquip[data-mode="note"] .blk-media{order:5;}
+#overlayEquip[data-mode="note"] #equipText{min-height:220px;}
+.plate-view{position:relative; border-radius:var(--radius-md); overflow:hidden; background:#0E1218; border:1px solid var(--line);}
+.plate-view img{display:block; width:100%; max-height:34vh; object-fit:contain; cursor:zoom-in;}
+.plate-empty{display:flex; flex-direction:column; align-items:center; gap:6px; width:100%; padding:26px 16px; background:var(--surface-2); border:1px dashed var(--accent); border-radius:var(--radius-md); color:var(--accent-ink); cursor:pointer; font:inherit;}
+.plate-empty svg{width:30px; height:30px;}
+.plate-empty b{font-size:15px;}
+.plate-empty span{font-size:12.5px; color:var(--ink-soft);}
+.plate-del{position:absolute; top:8px; right:8px; width:30px; height:30px; border-radius:50%; border:none; background:rgba(14,18,24,.72); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;}
+.plate-del svg{width:14px; height:14px;}
+.plate-thumbs{display:flex; gap:8px; margin-top:8px; overflow-x:auto;}
+.plate-thumbs:empty{display:none;}
+.plate-thumb{flex:none; width:56px; height:56px; border-radius:var(--radius-sm); overflow:hidden; border:2px solid var(--line); padding:0; background:#0E1218; cursor:pointer;}
+.plate-thumb.on{border-color:var(--accent);}
+.plate-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+.plate-status{display:flex; align-items:flex-start; gap:8px; margin-top:10px; font-size:13px; line-height:1.45; color:var(--ink-soft);}
+.plate-status:empty{display:none;}
+.plate-status .ps-dot{flex:none; width:8px; height:8px; margin-top:6px; border-radius:50%; background:var(--ink-faint);}
+.plate-status.busy .ps-dot{background:var(--accent); animation:pulse 1s ease-in-out infinite;}
+.plate-status.ok{color:var(--ink);} .plate-status.ok .ps-dot{background:var(--good);}
+.plate-status.fail .ps-dot{background:var(--danger);}
+.plate-status.warn{color:var(--ink);} .plate-status.warn .ps-dot{background:#E0A500;}
+@keyframes pulse{0%,100%{opacity:.3;} 50%{opacity:1;}}
+.plate-bar{height:4px; margin-top:8px; border-radius:99px; background:var(--line); overflow:hidden;}
+.plate-bar[hidden]{display:none;}
+.plate-bar > i{display:block; height:100%; width:0; background:var(--accent); transition:width .25s;}
+.plate-actions{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+.plate-actions .btn{width:auto;}
+.plate-actions [hidden]{display:none;}
+.plate-text{margin-top:10px; font-size:12px; color:var(--ink-soft);}
+.plate-text summary{cursor:pointer; font-weight:600;}
+.plate-text pre{margin:8px 0 0; padding:10px 12px; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius-sm); font-family:var(--font-mono); font-size:11px; line-height:1.5; white-space:pre-wrap; overflow-wrap:anywhere; max-height:200px; overflow:auto;}
+.ef-row.auto input{border-color:var(--accent); background:color-mix(in srgb, var(--accent) 7%, var(--surface));}
+.ef-auto{margin-left:8px; padding:1px 7px; border-radius:99px; background:var(--accent-soft); color:var(--accent-ink); font-family:var(--font-mono); font-size:9.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; vertical-align:1px;}
+.note-plates{display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 2px;}
+.note-plates img{width:64px; height:48px; object-fit:cover; border-radius:8px; border:1px solid var(--line); background:#0E1218;}
+.seg-hint{margin:0 0 14px;}
+.plate-zoom{flex:1; overflow:auto; background:#000; -webkit-overflow-scrolling:touch;}
+.plate-zoom img{display:block; width:100%; max-width:none; cursor:zoom-in;}
+.plate-zoom img.z2{width:250%;} .plate-zoom img.z3{width:420%;}
 </style>
 </head>
 <body>
@@ -406,9 +460,10 @@ input,textarea{font-family:inherit;}
 
   <!-- ACCUEIL -->
   <div class="view active" id="view-home">
-    <div class="stats-row">
+    <div class="stats-row four">
       <div class="stat-tile accent" data-jump="home"><div class="num" id="statPhotos">0</div><div class="lbl">Photos</div></div>
       <div class="stat-tile" data-jump="notes"><div class="num" id="statNotes">0</div><div class="lbl">Notes</div></div>
+      <div class="stat-tile" data-jump="equip"><div class="num" id="statEquip">0</div><div class="lbl">Équip.</div></div>
       <div class="stat-tile todo" data-jump="todo"><div class="num" id="statTodo">0</div><div class="lbl">À faire</div></div>
     </div>
 
@@ -425,15 +480,30 @@ input,textarea{font-family:inherit;}
   <!-- NOTES -->
   <div class="view" id="view-notes">
     <div class="segmented">
-      <button class="active" data-seg="equip">Équipement</button>
+      <button class="active" data-seg="notes">Notes</button>
+      <button data-seg="equip">Équipements</button>
       <button data-seg="todo">Pense-bête</button>
     </div>
 
-    <div id="seg-equip">
-      <button class="btn primary" id="btnNewEquip" style="margin-bottom:16px;">
+    <div id="seg-notes">
+      <button class="btn primary" id="btnNewNote" style="margin-bottom:16px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        Nouvelle note équipement
+        Nouvelle note
       </button>
+      <div id="noteList"></div>
+    </div>
+
+    <div id="seg-equip" style="display:none;">
+      <button class="btn primary" id="btnNewPlate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4"/></svg>
+        Photographier une plaque signalétique
+      </button>
+      <p class="hint seg-hint" style="margin-top:10px;">Cadrez la plaque de près, à plat et bien éclairée : l'appli lit marque, modèle, année et puissance quand elle en est sûre, et laisse vide le reste.</p>
+      <div style="display:flex; flex-direction:column; align-items:flex-start; gap:10px; margin:0 0 16px;">
+        <button type="button" class="drive-configure" id="btnNewEquip">Ajouter un équipement sans plaque</button>
+        <button type="button" class="drive-configure" id="btnOcrWarm"></button>
+        <div class="plate-bar" id="ocrWarmBar" hidden style="width:100%; margin:0;"><i></i></div>
+      </div>
       <div id="equipList"></div>
     </div>
 
@@ -451,9 +521,10 @@ input,textarea{font-family:inherit;}
     <div class="report-card">
       <h3 id="repSite">Synthèse de visite</h3>
       <p id="repSummary">—</p>
-      <div class="stats-row">
+      <div class="stats-row four">
         <div class="stat-tile"><div class="num" id="repPhotos">0</div><div class="lbl">Photos</div></div>
         <div class="stat-tile"><div class="num" id="repNotes">0</div><div class="lbl">Notes</div></div>
+        <div class="stat-tile"><div class="num" id="repEquip">0</div><div class="lbl">Équip.</div></div>
         <div class="stat-tile todo clear"><div class="num" id="repTodoDone">0/0</div><div class="lbl">À faire</div></div>
       </div>
     </div>
@@ -478,7 +549,7 @@ input,textarea{font-family:inherit;}
 
     <div class="report-card">
       <h3>Sauvegarde Google Drive</h3>
-      <p>Crée (ou met à jour) un dossier pour cette visite dans votre Drive : les photos y sont rangées dans un sous-dossier par usage énergétique, avec les schémas et le rapport à jour. À faire quand vous retrouvez du réseau — pas besoin sur site.</p>
+      <p>Crée (ou met à jour) un dossier pour cette visite dans votre Drive : les photos y sont rangées dans un sous-dossier par usage énergétique, les plaques signalétiques dans « Plaques signalétiques », avec les schémas et le rapport à jour. À faire quand vous retrouvez du réseau — pas besoin sur site.</p>
       <div class="drive-status off" id="driveStatus"><span class="dot"></span><span id="driveStatusText">Google Drive non configuré</span></div>
       <div class="btn-row">
         <button class="btn primary" id="btnDriveSync">
@@ -503,6 +574,7 @@ input,textarea{font-family:inherit;}
   </div>
 
   <input type="file" accept="image/*" capture="environment" id="cameraInput" style="display:none;">
+  <input type="file" accept="image/*" capture="environment" id="plateInput" style="display:none;">
 
   <div class="tabbar">
     <div class="tabbar-inner">
@@ -510,7 +582,7 @@ input,textarea{font-family:inherit;}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21V10l5 3V9l5 3V4l5 4v13H3Z" stroke-linejoin="round"/><path d="M3 21h18"/></svg>
         <span>Accueil</span>
       </button>
-      <button class="tab" data-tab="notes" data-seg-target="equip">
+      <button class="tab" data-tab="notes" data-seg-target="notes">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>
         <span>Notes</span>
       </button>
@@ -544,7 +616,8 @@ input,textarea{font-family:inherit;}
     <ol class="help-steps">
       <li><span><strong>Visite</strong> — tapotez la pastille en haut pour créer ou changer de visite (site, date, auditeur). Photos et notes sont toujours rattachées à la visite active.</span></li>
       <li><span><strong>Photo</strong> — bouton central de la barre du bas : choisissez d'abord la zone (chaque visite a sa propre liste : « Modifier » retire celles dont vous n'avez pas besoin, « Nouvelle zone » en ajoute), l'appareil photo natif s'ouvre, puis classez par usage et commentaire. La liste des usages se modifie de la même façon (« Modifier » à côté de « Usage / poste énergétique »), elle aussi propre à chaque visite.</span></li>
-      <li><span><strong>Notes</strong> — onglet Notes : fiches équipement (avec schémas annotables et notes vocales), ou pense-bête à cocher au fur et à mesure. Choisissez le type de fiche (compresseur, chaudière, groupe froid…) : ses champs s'affichent avec les valeurs courantes à toucher, et chaque fiche devient une colonne du tableau d'équipements dans Studio Rapport. « Dupliquer » recopie une fiche pour la machine identique suivante.</span></li>
+      <li><span><strong>Notes</strong> — onglet Notes, trois rubriques. <strong>Notes</strong> : texte libre pour tout écrire en vrac (avec schémas annotables et notes vocales). <strong>Équipements</strong> : photographiez la plaque signalétique, l'appli lit marque, modèle, année, puissance… quand elle en est sûre et laisse vide le reste. Les champs lus sont en bleu : vérifiez-les avec la photo et complétez à la main. Chaque fiche devient une colonne du tableau d'équipements dans Studio Rapport ; « Dupliquer » recopie une fiche pour la machine identique suivante. <strong>Pense-bête</strong> : à cocher au fur et à mesure.</span></li>
+      <li><span><strong>Lecture des plaques</strong> — elle se fait sur le téléphone : aucune photo n'est envoyée. La toute première fois, elle télécharge environ 7 Mo : touchez « Préparer la lecture sans connexion » (rubrique Équipements) quand vous avez du Wi-Fi, pour pouvoir lire les plaques sur site sans réseau. Plaque abîmée, trop loin ou reflétée : cadrez de plus près, bien à plat ; sinon remplissez à la main, ou touchez « Relire la plaque » plus tard.</span></li>
       <li><span><strong>Rapport</strong> — onglet Rapport : générez le rapport photo (HTML) et le fichier de données (Excel), ou sauvegardez sur Google Drive.</span></li>
     </ol>
 
@@ -639,37 +712,60 @@ input,textarea{font-family:inherit;}
   </div>
 </div>
 
-<!-- Equipment note editor overlay -->
-<div class="overlay" id="overlayEquip">
+<!-- Note / équipement editor overlay (data-mode = note | equip) -->
+<div class="overlay" id="overlayEquip" data-mode="equip">
   <div class="overlay-header">
-    <h2 id="equipTitle">Note équipement</h2>
+    <h2 id="equipTitle">Équipement</h2>
     <div class="overlay-close" id="closeEquip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></div>
   </div>
   <div class="overlay-body">
-    <div class="field">
-      <label>Équipement / repère</label>
-      <input type="text" id="equipName" placeholder="Ex : Compresseur GA37 n°2">
+    <div class="blk only-equip" id="plateBox">
+      <div class="plate-view" id="plateView"></div>
+      <div class="plate-thumbs" id="plateThumbs"></div>
+      <div class="plate-status" id="plateStatus" aria-live="polite"></div>
+      <div class="plate-bar" id="plateBar" hidden><i></i></div>
+      <div class="plate-actions">
+        <button type="button" class="btn secondary small" id="btnPlateAdd" hidden>Autre photo de la plaque</button>
+        <button type="button" class="btn secondary small" id="btnPlateRead" hidden>Relire la plaque</button>
+      </div>
+      <details class="plate-text" id="plateTextBox" hidden><summary>Texte lu sur la plaque</summary><pre id="plateText"></pre></details>
     </div>
-    <div class="section-title" style="margin-top:0;">Usage / poste énergétique</div>
-    <div class="chip-row" id="equipUsages"></div>
-    <div class="section-title">Zone</div>
-    <div class="chip-row" id="equipZones"></div>
-    <div class="section-title">Fiche<span class="ef-count" id="equipFieldCount"></span></div>
-    <div class="chip-row" id="equipTypes"></div>
-    <div class="ef-list" id="equipFields"></div>
-    <div class="field" style="margin-top:16px;">
-      <label id="equipTextLabel">Caractéristiques / fonctionnement</label>
-      <div class="field-chips" id="equipQuickFields"></div>
-      <textarea id="equipText" placeholder="Puissance, régime horaire, état, observations…"></textarea>
+    <div class="blk blk-name">
+      <div class="field" style="margin-bottom:0;">
+        <label id="equipNameLabel">Équipement / repère</label>
+        <input type="text" id="equipName" placeholder="Ex : Compresseur GA37 n°2">
+      </div>
     </div>
-    <div class="section-title">Schémas</div>
-    <div class="sketch-strip" id="equipSketches"></div>
-    <div class="section-title">Notes vocales</div>
-    <div class="voice-strip" id="equipVoices"></div>
-    <button type="button" class="btn secondary" id="btnRecordVoice" style="margin-top:2px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/></svg>
-      Enregistrer une note vocale
-    </button>
+    <div class="blk blk-usage">
+      <div class="section-title">Usage / poste énergétique</div>
+      <div class="chip-row" id="equipUsages"></div>
+    </div>
+    <div class="blk blk-zone">
+      <div class="section-title">Zone</div>
+      <div class="chip-row" id="equipZones"></div>
+    </div>
+    <div class="blk blk-fiche only-equip">
+      <div class="section-title">Fiche<span class="ef-count" id="equipFieldCount"></span></div>
+      <div class="chip-row" id="equipTypes"></div>
+      <div class="ef-list" id="equipFields"></div>
+    </div>
+    <div class="blk blk-text">
+      <div class="field" style="margin-bottom:0;">
+        <label id="equipTextLabel">Caractéristiques / fonctionnement</label>
+        <div class="field-chips" id="equipQuickFields"></div>
+        <textarea id="equipText" placeholder="Puissance, régime horaire, état, observations…"></textarea>
+      </div>
+    </div>
+    <div class="blk blk-media">
+      <div class="section-title">Schémas</div>
+      <div class="sketch-strip" id="equipSketches"></div>
+      <div class="section-title">Notes vocales</div>
+      <div class="voice-strip" id="equipVoices"></div>
+      <button type="button" class="btn secondary" id="btnRecordVoice" style="margin-top:2px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/></svg>
+        Enregistrer une note vocale
+      </button>
+    </div>
   </div>
   <div class="overlay-footer">
     <div class="btn-row">
@@ -677,6 +773,15 @@ input,textarea{font-family:inherit;}
       <button class="btn primary" id="saveEquip">Enregistrer</button>
     </div>
   </div>
+</div>
+
+<!-- Plate zoom overlay -->
+<div class="overlay" id="overlayPlate">
+  <div class="overlay-header">
+    <h2>Plaque signalétique</h2>
+    <div class="overlay-close" id="closePlate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></div>
+  </div>
+  <div class="plate-zoom" id="plateZoom"><img id="plateZoomImg" alt="Plaque signalétique"></div>
 </div>
 
 <!-- Sketch overlay -->
@@ -1053,7 +1158,8 @@ function escAttr(s){ return esc(s).replace(/"/g,'&quot;'); }
 var galleryFilterZone = null, galleryFilterUsage = null;
 function renderHome(){
   document.getElementById('statPhotos').textContent = state.photos.length;
-  document.getElementById('statNotes').textContent = state.equip.length;
+  document.getElementById('statNotes').textContent = state.equip.filter(function(n){ return kindOf(n) === 'note'; }).length;
+  document.getElementById('statEquip').textContent = state.equip.filter(function(n){ return kindOf(n) === 'equip'; }).length;
   var openTodos = state.todos.filter(function(t){return !t.done;}).length;
   document.getElementById('statTodo').textContent = openTodos;
   document.getElementById('statTodo').closest('.stat-tile').classList.toggle('clear', openTodos===0);
@@ -1454,36 +1560,510 @@ function toggleVoiceRecording(n){
   }).catch(function(){ toast('Micro indisponible ou refusé'); });
 }
 
-/* ---------- NOTES: équipement ---------- */
-function renderEquip(){
-  var wrap = document.getElementById('equipList');
-  if(state.equip.length===0){ wrap.innerHTML=''; wrap.appendChild(emptyState('note','Aucune note équipement','Consignez le fonctionnement, la puissance ou l’état d’un équipement.')); return; }
-  wrap.innerHTML='';
-  state.equip.forEach(function(n){
-    var card = document.createElement('div'); card.className='card note-card'; card.style.setProperty('--c', usageColor(n.usage)||'var(--accent)');
-    var et = EQUIP_TYPES[n.type], fl = equipFieldList(n);
-    var tags = (et? '<span class="note-type">'+esc(et.titre)+' · '+fl.length+'/'+et.champs.length+'</span>':'') + [n.zone, n.usage].filter(Boolean).map(function(t){return '<span class="tag-mini">'+esc(t)+'</span>';}).join('');
-    var sketches = (n.sketches||[]).map(function(sk){ return '<img src="'+URL.createObjectURL(sk.blob)+'">'; }).join('');
-    card.innerHTML =
-      '<div class="note-head"><span class="note-title">'+esc(n.title||'Sans titre')+'</span><span class="note-time">'+fmtDateTime(n.ts)+'</span></div>'+
-      (tags? '<div class="note-tags">'+tags+'</div>':'')+
-      (fl.length? '<dl class="note-fields">'+fl.map(function(f){ return '<dt>'+esc(f[0])+'</dt><dd>'+esc(f[1])+'</dd>'; }).join('')+'</dl>':'')+
-      '<div class="note-text">'+esc(n.text||'')+'</div>'+
-      (sketches? '<div class="note-sketches">'+sketches+'</div>':'')+
-      '<div class="card-actions">'+
-        (et? '<button class="icon-btn dup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Dupliquer</button>':'')+
-        '<button class="icon-btn edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Modifier</button></div>';
-    (n.voiceNotes||[]).forEach(function(vn){
-      var audio = document.createElement('audio'); audio.controls = true; audio.preload = 'metadata'; audio.src = URL.createObjectURL(vn.blob);
-      audio.style.width = '100%'; audio.style.marginTop = '8px'; audio.style.height = '32px';
-      card.insertBefore(audio, card.querySelector('.card-actions'));
+/* ---------- plaque signalétique : analyse du texte lu ---------- */
+/* PLATEPARSE:BEGIN */
+/* Lecture de plaque signalétique : analyse du texte reconnu (OCR) → marque, modèle, année, puissance, fluide frigorigène, type d'équipement.
+   Principe : ne retourner une valeur que si elle est sans ambiguïté et lue avec une bonne confiance ; sinon rien (champ laissé vide). */
+var PlateParse = (function(){
+  'use strict';
+
+  /* [nom affiché, type de fiche si la marque est spécialisée] */
+  /* [nom affiché, type de fiche si la marque est spécialisée, autres écritures] */
+  var BRANDS = [
+    ['Atlas Copco','air'],['Kaeser','air'],['Boge','air'],['Mattei','air'],['CompAir','air'],['Sullair','air'],['Fini','air'],['Abac','air'],['Almig','air'],
+    ['Ingersoll Rand'],['Aerzen'],['Gardner Denver'],['Chicago Pneumatic'],['Hitachi'],
+    ['Parker'],['Donaldson'],['Zander'],['Beko'],['Hankison'],
+    ['Viessmann'],['Buderus'],['Bosch'],['De Dietrich'],['Weishaupt'],['Riello'],['Baltur'],['Ecoflam'],['Elco'],['Vaillant'],['Saunier Duval'],['Chappée'],
+    ['Babcock Wanson'],['Loos'],['Cerney'],['Clayton'],['Cochran'],['Hoval'],['Wolf'],['Atlantic'],
+    ['Carrier'],['Trane'],['Daikin'],['York'],['Johnson Controls'],['McQuay'],['Mitsubishi Electric'],['Mayekawa'],['GEA'],['Bitzer'],['Frascold'],['Copeland'],
+    ['Danfoss'],['Dorin'],['Bock'],['Clivet'],['Climaveneta'],['Aermec'],['Rhoss'],['Airwell'],['Toshiba'],['Lennox'],
+    ['Systemair'],['France Air'],['Ciat'],['Aldes'],['Zehnder'],['Nicotra Gebhardt'],['ebm-papst'],['Ziehl-Abegg'],['Rosenberg'],['Soler & Palau'],['Swegon'],['Trox'],['Flakt'],
+    ['Siemens'],['ABB',null,['ASEA','Asea Brown Boveri','Brown Boveri','Boveri']],['WEG'],['Leroy-Somer'],['SEW'],['Grundfos'],['Wilo'],['KSB'],['Lowara'],['AEG'],['Loher'],['Malmbergs'],
+    ['Schneider Electric'],['Legrand'],['Mitsubishi'],['Panasonic'],['Samsung']
+  ];
+  var BRAND_KEYS = [];
+  BRANDS.forEach(function(b, i){
+    BRAND_KEYS.push({ key:norm(b[0]), i:i });
+    (b[2] || []).forEach(function(al){ BRAND_KEYS.push({ key:norm(al), i:i }); });
+  });
+
+  var REFRIGERANTS = {
+    'R22':'R22','R32':'R32','R134A':'R134a','R125':'R125','R143A':'R143a','R290':'R290','R404A':'R404A','R407A':'R407A','R407C':'R407C','R407F':'R407F',
+    'R410A':'R410A','R417A':'R417A','R422D':'R422D','R427A':'R427A','R448A':'R448A','R449A':'R449A','R450A':'R450A','R452A':'R452A','R454B':'R454B','R454C':'R454C',
+    'R507A':'R507A','R513A':'R513A','R600A':'R600a','R717':'NH3','R744':'CO2','R1234YF':'R1234yf','R1234ZE':'R1234ze','NH3':'NH3'
+  };
+
+  /* mots qui, juste avant/après un nombre à 4 chiffres, montrent que ce n'est pas une année */
+  /* seuils de confiance (0-100) : abaisser = plus de champs remplis mais plus de risques d'erreur */
+  var CFG = { modelMin:60, modelMean:70 };
+
+  var NOT_YEAR_CTX = /^(?:RPM|MIN|U\/MIN|1\/MIN|TR|TR\/MIN|TOURS|SPEED|VITESSE|DREHZAHL|N|NO|NR|N°|NUM|SERIAL|SER|S\/N|SN|ART|REF|TYP|TYPE|MODEL|MODELL|KG|M3\/H|L\/MIN|HZ|V|A|W|KW|BAR|MBAR|PA|KPA|MPA|MM|CM|M|T|VA|KVA|IP|FREQ|U|I|P|F|Q|PS|PN|TS|PMAX)$/;
+  var YEAR_LABEL = /(?:YEAR|ANN[EÉ]E|ANNEE|JAHR|BAUJAHR|BJ|ANNO|A[NÑ]O|MFG|MFD|MANUF[A-Z]*|FABR[A-Z]*|FAB|DATE|DATUM|BUILT|CONSTR[A-Z]*|PROD[A-Z]*|YOM|MY)[\s:.\-=]*$/;
+
+  function norm(s){ return String(s||'').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+  function stripAccents(s){ return String(s||'').normalize ? String(s).normalize('NFD').replace(/[̀-ͯ]/g, '') : String(s||''); }
+  function median(a){ var b = a.slice().sort(function(x,y){return x-y;}); return b.length ? b[b.length>>1] : 0; }
+
+  /* distance d'édition ≤ 1 ? */
+  function within1(a, b){
+    if(a === b) return true;
+    var la = a.length, lb = b.length;
+    if(Math.abs(la - lb) > 1) return false;
+    var i = 0, j = 0, diff = 0;
+    while(i < la && j < lb){
+      if(a.charAt(i) === b.charAt(j)){ i++; j++; continue; }
+      if(++diff > 1) return false;
+      if(la === lb){ i++; j++; } else if(la > lb){ i++; } else { j++; }
+    }
+    return diff + (la - i) + (lb - j) <= 1;
+  }
+
+  /* mots (avec boîtes) → lignes de lecture. Un grand écart horizontal est marqué « | » (case de tableau différente). */
+  function buildRows(words){
+    var ws = words.filter(function(w){ return w && w.t && String(w.t).trim() && isFinite(w.y0) && isFinite(w.y1); })
+                  .map(function(w){ return { t:String(w.t).trim(), c:+w.c||0, x0:+w.x0, x1:+w.x1, y0:+w.y0, y1:+w.y1, cy:(+w.y0 + +w.y1)/2, h:Math.max(1, +w.y1 - +w.y0) }; });
+    ws.sort(function(a, b){ return a.cy - b.cy; });
+    var rows = [];
+    ws.forEach(function(w){
+      var r = rows[rows.length-1];
+      if(r && Math.abs(w.cy - r.cy) <= 0.6 * Math.min(r.h, Math.max(w.h, 8))){
+        r.words.push(w); var n = r.words.length; r.cy = (r.cy*(n-1) + w.cy)/n; r.h = (r.h*(n-1) + w.h)/n;
+      } else rows.push({ words:[w], cy:w.cy, h:w.h });
     });
-    card.querySelector('.edit').addEventListener('click', function(){ openEquipEditor(n.id); });
-    if(et) card.querySelector('.dup').addEventListener('click', function(){ duplicateEquip(n); });
-    wrap.appendChild(card);
+    rows.forEach(function(r){
+      r.words.sort(function(a, b){ return a.x0 - b.x0; });
+      var text = '', owner = [];
+      r.words.forEach(function(w, i){
+        if(i){
+          var gap = w.x0 - r.words[i-1].x1, sep = gap > 1.7 * r.h ? ' | ' : ' ';
+          for(var k = 0; k < sep.length; k++) owner.push(-1);
+          text += sep;
+        }
+        for(var q = 0; q < w.t.length; q++) owner.push(i);
+        text += w.t;
+      });
+      r.text = text; r.owner = owner;
+    });
+    return rows;
+  }
+  function confStats(row, s, e){
+    var m = 100, seen = {}, sum = 0, n = 0;
+    for(var i = s; i < e && i < row.owner.length; i++){
+      var o = row.owner[i];
+      if(o >= 0 && !seen[o]){ seen[o] = true; var c = row.words[o].c; if(c < m) m = c; sum += c; n++; }
+    }
+    return n ? { min:m, mean:sum / n } : { min:0, mean:0 };
+  }
+  function minConf(row, s, e){ return confStats(row, s, e).min; }
+
+  /* ---------- marque ---------- */
+  function findBrand(rows){
+    var found = [];
+    rows.forEach(function(r, ri){
+      var toks = r.words, i, k;
+      for(i = 0; i < toks.length; i++){
+        for(k = 3; k >= 1; k--){
+          if(i + k > toks.length) continue;
+          var sub = toks.slice(i, i + k), ok = true;
+          for(var q = 1; q < k; q++){ if(sub[q].x0 - sub[q-1].x1 > 1.7 * r.h) ok = false; }
+          if(!ok) continue;
+          var joined = norm(sub.map(function(s){ return s.t; }).join('')), conf = Math.min.apply(null, sub.map(function(s){ return s.c; }));
+          if(joined.length < 3) continue;
+          for(var b = 0; b < BRAND_KEYS.length; b++){
+            var key = BRAND_KEYS[b].key, exact = joined === key;
+            var prefix = !exact && key.length >= 5 && joined.indexOf(key) === 0 && joined.length <= key.length + 12;
+            var fuzzy = !exact && !prefix && key.length >= 6 && joined.length >= 6 && within1(joined, key);
+            if(exact && conf >= 75 || prefix && conf >= 80 || fuzzy && conf >= 88){
+              var br = BRANDS[BRAND_KEYS[b].i];
+              found.push({ name:br[0], hint:br[1] || null, conf:conf, row:ri, kind: exact ? 'exact' : prefix ? 'prefix' : 'fuzzy' });
+            }
+          }
+        }
+      }
+    });
+    if(!found.length) return legalName(rows);
+    var names = {}; found.forEach(function(f){ names[f.name] = (names[f.name] && names[f.name].conf >= f.conf) ? names[f.name] : f; });
+    var list = Object.keys(names).map(function(n){ return names[n]; }).sort(function(a, b){ return a.row - b.row || b.conf - a.conf; });
+    if(list.length === 1) return list[0];
+    // plusieurs marques : on ne garde que la première (ligne la plus haute) si elle est lue très sûrement, sinon on s'abstient
+    return list[0].conf >= 90 ? list[0] : null;
+  }
+  /* marque inconnue du dictionnaire mais suivie d'une forme juridique : « Loher GmbH » */
+  var LEGAL = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ&.\-]{2,19}(?:\s+[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ&.\-]{2,19}){0,1})\s+(?:GMBH|AG|S\.?A\.?S?\.?|S\.?P\.?A\.?|LTD\.?|LIMITED|INC\.?|CORP\.?|B\.?V\.?|N\.?V\.?|SARL|KG|OY|AB)(?![A-Za-z])/i;
+  var NOT_BRAND = /^(?:MADE|IN|BY|TYPE|MOTOR|MOTEUR|MACHINE|THREE|PHASE|ELEKTRO|ELEKTROMOTORENWERKE|INDUCTION|GENERATOR|COMPRESSOR|COMPRESSEUR|BOILER|FAN|PUMP|POMPE|ASYNCHRONOUS|ASYNCHRON|ASYNCHRONE)$/i;
+  function legalName(rows){
+    for(var ri = 0; ri < rows.length; ri++){
+      var r = rows[ri], m = LEGAL.exec(r.text);
+      if(!m) continue;
+      var words = m[1].split(/\s+/), bad = words.some(function(w){ return NOT_BRAND.test(w) || /\d/.test(w); });
+      if(bad) continue;
+      if(minConf(r, m.index, m.index + m[1].length) < 88) continue;
+      var disp = words.map(function(w){ return w.length <= 3 ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }).join(' ');
+      return { name:disp, hint:null, conf:minConf(r, m.index, m.index + m[1].length), row:ri, kind:'legal' };
+    }
+    return null;
+  }
+
+  /* ---------- modèle / type ---------- */
+  var MODEL_LABEL = /(?:^|[\s|])(?:TYPE|TYP|MODEL|MODELL|MOD[EÈ]LE|MODELO|MOD|TIPO|R[EÉ]F|REFERENCE|R[EÉ]F[EÉ]RENCE)\s*(?:NO\.?|N°|NR\.?)?\s*[:.=\-]*\s*\|?\s*/gi;
+  var STOP_AFTER = /\s(?:NO|NR|N°|SERIAL|SER|S\/N|SN|KW|HP|HZ|IP|COS|U\/MIN|RPM|MIN|BAR|KG|MOT|YEAR|ANN[EÉ]E|DATE)(?![A-Za-z])/i;
+  function findModel(rows){
+    var best = null;
+    rows.forEach(function(r, ri){
+      MODEL_LABEL.lastIndex = 0;
+      var m;
+      while((m = MODEL_LABEL.exec(r.text))){
+        var start = m.index + m[0].length, rest = r.text.slice(start), cut = rest.indexOf('|');
+        if(cut >= 0) rest = rest.slice(0, cut);
+        var stop = STOP_AFTER.exec(rest);
+        if(stop) rest = rest.slice(0, stop.index);
+        rest = rest.replace(/^[\s_.\-~=:]+|[\s_.\-~=:|]+$/g, '');
+        if(rest.length < 3 || rest.length > 28) continue;
+        if(!/\d/.test(rest) && !/^[A-Z]{3,}$/.test(rest)) continue;       // un modèle contient un chiffre (ou, à défaut, un mot tout en majuscules)
+        if(/^(?:NO|NR|N°|SERIAL|MOT|S\/N)/i.test(rest)) continue;
+        if(/[:;]/.test(rest)) continue;                                     // « Type d'huile : ISO VG 46 » : c'est un autre libellé, pas un modèle
+        if(!/[A-Z0-9]/.test(rest.split(/\s+/)[0])) continue;                // « Type de refroidissement » : le mot qui suit un vrai code commence par une majuscule ou un chiffre
+        if(/^(?:de|du|des|d'|of|for|der|die|das|von|fur|für)(?![A-Za-z])/i.test(rest)) continue;
+        var lead = r.text.slice(start).search(/\S/), from = start + (lead > 0 ? lead : 0), st = confStats(r, from, from + rest.length);
+        var cand = { value:rest.replace(/\s{2,}/g, ' '), conf:Math.round(st.mean), min:st.min, row:ri };
+        if(st.min >= CFG.modelMin && st.mean >= CFG.modelMean && (!best || cand.conf > best.conf)) best = cand;
+      }
+    });
+    return best;
+  }
+
+  /* ---------- année ---------- */
+  function findYear(rows){
+    var now = new Date().getFullYear(), good = [], plain = [], all4 = 0;
+    rows.forEach(function(r, ri){
+      var re = /(?:^|[^0-9A-Za-z])((?:19[6-9]|20[0-3])\d)(?![0-9])/g, m;
+      while((m = re.exec(r.text))){
+        var y = +m[1]; if(y > now + 1) continue;
+        var s = m.index + m[0].indexOf(m[1]), e = s + 4, before = r.text.slice(0, s), after = r.text.slice(e);
+        var conf = minConf(r, s, e);
+        var prevCh = before.slice(-1), nextCh = after.charAt(0);
+        // norme / directive : EN 60034:2010, 2014/68/UE, ISO 9001:2015
+        if(prevCh === ':' || /^\/\s?(?:EU|UE|EC|CE)/i.test(after) || (prevCh === '/' && /^[\s|]*$/.test(after.slice(0,1)) === false && /(?:EN|ISO|IEC|DIN|VDE|NF)\b/i.test(before))) continue;
+        if(/(?:EN|ISO|IEC|DIN|VDE|NF|CEI|UNI)\s*[\dA-Z\-]*\s*$/i.test(before) && prevCh !== ' ') continue;
+        all4++;
+        var cell = before.split('|').pop();
+        var dated = /(?:^|[^0-9])(?:0?[1-9]|1[0-2])\s?[\/.\-]\s?$/.test(cell) || /^\s?[\/.\-]\s?(?:0?[1-9]|1[0-2])(?![0-9])/.test(after);
+        var labeled = YEAR_LABEL.test(cell.toUpperCase());
+        var toks = cell.trim().split(/\s+/), prevTok = (toks[toks.length-1] || '').toUpperCase().replace(/[.:]+$/, ''), prev2 = (toks[toks.length-2] || '').toUpperCase().replace(/[.:]+$/, '');
+        var nextTok = after.replace(/^[\s]*/, '').split(/[\s|]/)[0].toUpperCase().replace(/^[.:]+|[.:]+$/g, '');
+        var bad = NOT_YEAR_CTX.test(prevTok) || NOT_YEAR_CTX.test(prev2) || NOT_YEAR_CTX.test(nextTok);
+        var item = { year:y, conf:conf, row:ri };
+        if((labeled || dated) && !(bad && !labeled)) good.push(item);
+        else if(!bad) plain.push(item);
+      }
+    });
+    var uniq = function(a){ var s = {}; a.forEach(function(x){ s[x.year] = (s[x.year] && s[x.year].conf >= x.conf) ? s[x.year] : x; }); return Object.keys(s).map(function(k){ return s[k]; }); };
+    var g = uniq(good).filter(function(x){ return x.conf >= 80; });
+    if(g.length === 1 && uniq(good).length === 1) return g[0];
+    if(g.length) return null;
+    var p = uniq(plain).filter(function(x){ return x.conf >= 90; });
+    if(p.length === 1 && uniq(plain).length === 1 && all4 === 1) return p[0];
+    return null;
+  }
+
+  /* ---------- puissance (kW) ---------- */
+  function fmtKw(s){ s = String(s).replace('.', ','); return s.replace(/^0+(?=\d)/, '').replace(/,0+$/, ''); }
+  function findPower(rows){
+    var cands = [], ambiguous = false;
+    /* le nombre doit être lu sûrement ; l'unité « kW » (2 lettres) est souvent notée à faible confiance même quand elle est juste */
+    rows.forEach(function(r, ri){
+      var a = /((?:\d{1,5}(?:[.,]\d{1,3})?\s*[\/|]\s*)*)(\d{1,5}(?:[.,]\d{1,3})?)(\s?(?:\|\s?)?K\s?W(?:É|E|EL)?)(?![A-Za-z0-9])/gi, m;
+      while((m = a.exec(r.text))){
+        if(m[1]){ ambiguous = true; continue; }                    // « 4,8 / 14 kW » : deux vitesses, on ne choisit pas
+        var ns = m.index + m[1].length, ne = ns + m[2].length;
+        cands.push({ raw:m[2], conf:minConf(r, ns, ne), unit:minConf(r, ne, m.index + m[0].length), row:ri, ctx:r.text.toUpperCase() });
+      }
+      var b = /(?:^|[^A-Za-z0-9])(K\s?W(?:É|E|EL)?\.?\s*[:=]?\s*)(\d{1,5}(?:[.,]\d{1,3})?)(?![0-9.,]*\s?[\/%])/gi;
+      while((m = b.exec(r.text))){
+        var vs = m.index + m[0].length - m[2].length;
+        if(cands.some(function(c){ return c.row === ri && c.raw === m[2]; })) continue;
+        cands.push({ raw:m[2], conf:minConf(r, vs, vs + m[2].length), unit:minConf(r, m.index, vs), row:ri, ctx:r.text.toUpperCase() });
+      }
+    });
+    cands = cands.filter(function(c){ var v = parseFloat(c.raw.replace(',', '.')); return v >= 0.05 && v <= 20000 && c.conf >= 85 && c.unit >= 20; });
+    var byVal = {};
+    cands.forEach(function(c){
+      var v = parseFloat(c.raw.replace(',', '.')), k = String(v);
+      c.thermal = /UTILE|HEAT|CHALEUR|W[AÄ]RME|THERM|OUTPUT|STEAM|VAPEUR|DAMPF/.test(stripAccents(c.ctx));
+      c.cooling = /COOL|FRIG|K[AÄ]LTE|KALTE|REFRIG|CAPACIT/.test(stripAccents(c.ctx));
+      c.elec = /MOT|PUISS|POWER|LEIST|ABS|INPUT|RATED|NOM|ELEC|\bP\b/.test(stripAccents(c.ctx));
+      if(!byVal[k]) byVal[k] = c; else if(c.conf > byVal[k].conf) byVal[k] = c;
+    });
+    return { list:Object.keys(byVal).map(function(k){ return byVal[k]; }), ambiguous:ambiguous };
+  }
+
+  /* ---------- fluide frigorigène ---------- */
+  function findRefrigerant(rows){
+    var found = {};
+    rows.forEach(function(r){
+      var re = /(?:^|[^A-Za-z0-9])(R[\s\-]?\d{2,4}[A-Za-z]{0,2}|NH3|NH₃)(?![A-Za-z0-9])/g, m;
+      while((m = re.exec(r.text))){
+        var key = m[1].toUpperCase().replace(/[\s\-]/g, '').replace('NH₃', 'NH3');
+        if(!REFRIGERANTS[key]) continue;
+        var s = m.index + m[0].indexOf(m[1]), conf = minConf(r, s, s + m[1].length);
+        if(conf >= 80) found[REFRIGERANTS[key]] = Math.max(found[REFRIGERANTS[key]] || 0, conf);
+      }
+    });
+    var names = Object.keys(found);
+    return names.length === 1 ? { value:names[0], conf:found[names[0]] } : null;
+  }
+
+  /* ---------- type d'équipement ---------- */
+  var TYPE_WORDS = {
+    air:       /COMPRESS(?:OR|EUR|EURS)|KOMPRESSOR|VERDICHTER|SCREW\s*COMP|AIR\s*END/,
+    secheur:   /DRYER|SECHEUR|TROCKNER|DEHUMID|ADSORPTION/,
+    chaudiere: /BOILER|CHAUDIERE|KESSEL|DAMPFERZEUGER|STEAM\s*GENERATOR|GENERATEUR\s*DE\s*VAPEUR/,
+    froid:     /CHILLER|REFRIGERATION|GROUPE\s*FROID|KALTWASSERSATZ|KALTE|CONDENSING\s*UNIT|HEAT\s*PUMP|POMPE\s*A\s*CHALEUR|WARMEPUMPE/,
+    cta:       /AIR\s*HANDLING|AHU\b|CENTRALE\s*DE\s*TRAITEMENT|CENTRALE\s*DE\s*VENTILATION|LUFTUNGSGERAT|LUFTBEHANDLUNG|VENTILATEUR\b|VENTILATOR\b/
+  };
+  function guessType(rows, brand){
+    var text = stripAccents(rows.map(function(r){ return r.text; }).join(' \n ')).toUpperCase(), hits = [];
+    Object.keys(TYPE_WORDS).forEach(function(k){ if(TYPE_WORDS[k].test(text)) hits.push(k); });
+    if(hits.length === 1) return hits[0];
+    if(!hits.length && brand && brand.hint) return brand.hint;
+    return null;
+  }
+
+  /* ---------- analyse complète ---------- */
+  function analyse(words){
+    var rows = buildRows(words || []);
+    var brand = findBrand(rows);
+    return {
+      rows: rows.map(function(r){ return r.text; }),
+      brand: brand,
+      model: findModel(rows),
+      year: findYear(rows),
+      power: findPower(rows),
+      refrigerant: findRefrigerant(rows),
+      type: guessType(rows, brand)
+    };
+  }
+
+  /* fusion de plusieurs lectures (autres passes, autres photos) : une info vue une seule fois est gardée, deux infos contradictoires s'annulent */
+  function pick(list, same){
+    var xs = list.filter(Boolean);
+    if(!xs.length) return null;
+    for(var i = 1; i < xs.length; i++){ if(!same(xs[0], xs[i])) return null; }
+    return xs.reduce(function(a, b){ return (b.conf || 0) > (a.conf || 0) ? b : a; });
+  }
+  function merge(list){
+    list = (list || []).filter(Boolean);
+    if(list.length < 2) return list[0] || null;
+    var power = { list:[], ambiguous:false }, seen = {};
+    list.forEach(function(a){
+      power.ambiguous = power.ambiguous || a.power.ambiguous;
+      a.power.list.forEach(function(c){
+        var k = String(parseFloat(String(c.raw).replace(',', '.')));
+        if(!seen[k]){ seen[k] = c; power.list.push(c); } else if(c.conf > seen[k].conf){ seen[k].conf = c.conf; }
+      });
+    });
+    var types = list.map(function(a){ return a.type; }).filter(Boolean);
+    return {
+      rows: list[0].rows,
+      brand: pick(list.map(function(a){ return a.brand; }), function(x, y){ return x.name === y.name; }),
+      model: pick(list.map(function(a){ return a.model; }), function(x, y){ return norm(x.value) === norm(y.value); }),
+      year: pick(list.map(function(a){ return a.year; }), function(x, y){ return x.year === y.year; }),
+      refrigerant: pick(list.map(function(a){ return a.refrigerant; }), function(x, y){ return x.value === y.value; }),
+      power: power,
+      type: types.length && types.every(function(t){ return t === types[0]; }) ? types[0] : null
+    };
+  }
+
+  /* deux photos qui donnent des marques / modèles / années différents : ce ne sont sans doute pas les mêmes équipements */
+  function conflicts(list){
+    list = (list || []).filter(Boolean);
+    function differ(get, same){ var xs = list.map(get).filter(Boolean); for(var i = 1; i < xs.length; i++){ if(!same(xs[0], xs[i])) return true; } return false; }
+    return differ(function(a){ return a.brand; }, function(x, y){ return x.name === y.name; }) ||
+           differ(function(a){ return a.model; }, function(x, y){ return norm(x.value) === norm(y.value); }) ||
+           differ(function(a){ return a.year; }, function(x, y){ return x.year === y.year; });
+  }
+
+  /* gabarits de champs de chaque type de fiche → valeurs à proposer (uniquement ce qui est sûr) */
+  function fieldsFor(a, type, champs){
+    var out = {}, has = function(l){ return champs.indexOf(l) >= 0; };
+    if(a.brand && has('Marque')) out['Marque'] = a.brand.name;
+    if(a.model && has('Modèle')) out['Modèle'] = a.model.value;
+    if(a.year && has('Année')) out['Année'] = String(a.year.year);
+    if(a.refrigerant && has('Fluide frigorigène')) out['Fluide frigorigène'] = a.refrigerant.value;
+    var p = a.power && a.power.list || [], pick = function(pred){ var l = p.filter(pred); return l.length === 1 && l.length === p.length ? l[0] : null; };
+    var one = p.length === 1 ? p[0] : null, v = null, label = null;
+    if(type === 'chaudiere'){ label = 'Puissance utile (kW)'; v = pick(function(c){ return !c.cooling; }); }
+    else if(type === 'froid'){
+      /* deux puissances : on ne remplit que si chaque valeur est clairement « frigorifique » ou « électrique » d'après son libellé */
+      var cool = p.filter(function(c){ return c.cooling && !c.elec && !c.thermal; }), el = p.filter(function(c){ return c.elec && !c.cooling && !c.thermal; });
+      if(cool.length + el.length === p.length){
+        if(cool.length === 1 && has('Puissance frigorifique (kWf)')) out['Puissance frigorifique (kWf)'] = fmtKw(cool[0].raw);
+        if(el.length === 1 && has('Puissance électrique (kWé)')) out['Puissance électrique (kWé)'] = fmtKw(el[0].raw);
+      }
+    }
+    else if(type === 'cta'){ label = 'Puissance ventilateurs (kW)'; v = pick(function(c){ return !c.cooling && !c.thermal; }); }
+    else if(type === 'air' || type === 'secheur'){ label = 'Puissance plaquée (kWé)'; v = pick(function(c){ return !c.cooling && !c.thermal; }); }
+    else { label = 'Puissance (kW)'; v = pick(function(){ return true; }); }
+    if(v && label && has(label)) out[label] = fmtKw(v.raw);
+    return out;
+  }
+
+  return { cfg:CFG, analyse:analyse, merge:merge, conflicts:conflicts, fieldsFor:fieldsFor, buildRows:buildRows, findBrand:findBrand, findModel:findModel, findYear:findYear, findPower:findPower, findRefrigerant:findRefrigerant, guessType:guessType, fmtKw:fmtKw };
+})();
+/* PLATEPARSE:END */
+
+/* ---------- plaque signalétique : reconnaissance de texte sur l'appareil (Tesseract.js, chargé à la demande depuis jsDelivr) ----------
+   Rien n'est téléchargé tant qu'aucune plaque n'est photographiée (≈ 7 Mo la première fois, ensuite en cache). Les photos ne quittent jamais le téléphone. */
+var OCR_VERSION = '7.0.0';
+var ocr = { loading:null, worker:null, idle:null, onLog:null, queue:null };
+function loadScript(src){
+  return new Promise(function(res, rej){
+    var s = document.createElement('script'); s.src = src; s.async = true;
+    s.onload = res; s.onerror = function(){ rej(new Error('script')); };
+    document.head.appendChild(s);
   });
 }
-/* Machine identique suivante : même type, mêmes champs, titre incrémenté (rien n'est enregistré avant « Enregistrer ») */
+function withTimeout(p, ms){
+  return new Promise(function(res, rej){
+    var t = setTimeout(function(){ rej(new Error('timeout')); }, ms);
+    p.then(function(v){ clearTimeout(t); res(v); }, function(e){ clearTimeout(t); rej(e); });
+  });
+}
+function ocrEnsure(){
+  if(ocr.worker) return Promise.resolve(ocr.worker);
+  if(ocr.loading) return ocr.loading;
+  var lib = window.Tesseract ? Promise.resolve() : loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@' + OCR_VERSION + '/dist/tesseract.min.js');
+  ocr.loading = withTimeout(lib.then(function(){
+    return window.Tesseract.createWorker('eng', 1, { logger:function(m){ if(ocr.onLog) ocr.onLog(m); } });
+  }).then(function(w){
+    return w.setParameters({ tessedit_pageseg_mode:'11', preserve_interword_spaces:'1', user_defined_dpi:'300' }).then(function(){ ocr.worker = w; ocr.loading = null; return w; });
+  }), 240000).catch(function(e){ ocr.loading = null; throw e; });
+  return ocr.loading;
+}
+/* libère la mémoire (≈ 100 Mo) quand plus aucune lecture n'est demandée */
+function ocrReleaseLater(){
+  clearTimeout(ocr.idle);
+  ocr.idle = setTimeout(function(){ if(ocr.worker){ var w = ocr.worker; ocr.worker = null; try{ w.terminate(); }catch(e){} } }, 60000);
+}
+function plateCanvas(blob, maxDim){
+  return createImageBitmap(blob).then(function(bmp){
+    var w = bmp.width, h = bmp.height, sc = Math.min(1, maxDim / Math.max(w, h));
+    var c = document.createElement('canvas'); c.width = Math.round(w * sc); c.height = Math.round(h * sc);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    return c;
+  });
+}
+function compressPlate(file){
+  return createImageBitmap(file, {imageOrientation:'from-image'}).then(function(bmp){
+    var maxDim = 2000, w = bmp.width, h = bmp.height;
+    if(Math.max(w, h) > maxDim){ var sc = maxDim / Math.max(w, h); w = Math.round(w * sc); h = Math.round(h * sc); }
+    var c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(bmp, 0, 0, w, h);
+    return new Promise(function(res){ c.toBlob(res, 'image/jpeg', 0.82); });
+  });
+}
+/* mots reconnus → [texte, confiance, x0, y0, x1, y1] (format compact conservé avec la plaque) */
+function ocrWords(data){
+  var out = [];
+  ((data && data.blocks) || []).forEach(function(b){ (b.paragraphs || []).forEach(function(p){ (p.lines || []).forEach(function(l){ (l.words || []).forEach(function(w){
+    if(w && w.text && w.bbox) out.push([w.text, Math.round(w.confidence), w.bbox.x0, w.bbox.y0, w.bbox.x1, w.bbox.y1]);
+  }); }); }); });
+  return out;
+}
+function wordsToObjs(arr){ return (arr || []).map(function(w){ return { t:w[0], c:w[1], x0:w[2], y0:w[3], x1:w[4], y1:w[5] }; }); }
+/* messages du moteur → avancement lisible {msg, pct} */
+function ocrStatusFromLog(m){
+  if(!m || typeof m.progress !== 'number') return null;
+  var s = String(m.status || ''), p = m.progress;
+  if(/core/.test(s)) return { msg:'Téléchargement du moteur de lecture (première fois seulement)…', pct:0.05 + p * 0.3 };
+  if(/language/.test(s)) return { msg:'Téléchargement du dictionnaire (première fois seulement)…', pct:0.35 + p * 0.4 };
+  if(/initializing/.test(s)) return { msg:'Préparation de la lecture…', pct:0.78 };
+  if(/recognizing/.test(s)) return { msg:'Lecture de la plaque…', pct:0.8 + p * 0.2 };
+  return null;
+}
+/* lit une photo de plaque ; onStatus({msg, pct}) renseigne l'avancement. Les lectures sont mises en file (une à la fois). */
+function ocrRecognize(blob, onStatus){
+  var job = (ocr.queue || Promise.resolve()).then(function(){
+    clearTimeout(ocr.idle);
+    ocr.onLog = function(m){ var st = ocrStatusFromLog(m); if(st && onStatus) onStatus(st); };
+    if(onStatus) onStatus({ msg:'Préparation de la lecture…', pct:0.02 });
+    return ocrEnsure();
+  }).then(function(w){
+    return plateCanvas(blob, 2000).then(function(c){ return w.recognize(c, {}, { blocks:true }); });
+  }).then(function(res){ ocr.onLog = null; ocrReleaseLater(); return ocrWords(res.data); },
+          function(e){ ocr.onLog = null; ocrReleaseLater(); throw e; });
+  ocr.queue = job.catch(function(){});
+  return job;
+}
+
+/* « Préparer la lecture » : télécharge le moteur une fois (en Wi-Fi) pour qu'il soit disponible sur site sans réseau */
+var ocrWarmBusy = false;
+function ocrWarmLabel(){
+  document.getElementById('btnOcrWarm').textContent = lsGet('ocr_ready') ? 'Lecture des plaques prête sur cet appareil ✓' : 'Préparer la lecture sans connexion (≈ 7 Mo, une seule fois)';
+}
+document.getElementById('btnOcrWarm').addEventListener('click', function(){
+  if(ocrWarmBusy) return;
+  ocrWarmBusy = true;
+  var bar = document.getElementById('ocrWarmBar'), btn = this;
+  bar.hidden = false; bar.firstElementChild.style.width = '3%'; btn.textContent = 'Téléchargement…';
+  clearTimeout(ocr.idle);
+  ocr.onLog = function(m){ var st = ocrStatusFromLog(m); if(st){ bar.firstElementChild.style.width = Math.round(st.pct * 100) + '%'; btn.textContent = st.msg.replace(' (première fois seulement)', ''); } };
+  ocrEnsure().then(function(){
+    lsSet('ocr_ready', String(Date.now())); toast('Lecture des plaques prête ✓');
+  }).catch(function(){
+    toast('Téléchargement impossible : vérifiez la connexion');
+  }).then(function(){
+    ocr.onLog = null; ocrReleaseLater(); ocrWarmBusy = false; bar.hidden = true; ocrWarmLabel();
+  });
+});
+ocrWarmLabel();
+
+/* ---------- NOTES libres & ÉQUIPEMENTS (plaques signalétiques) ---------- */
+/* Un même magasin (« equip ») contient les deux : kind = 'note' (texte libre) ou 'equip' (fiche d'équipement). Les anciens enregistrements sans « kind » sont classés d'après leur type de fiche. */
+function kindOf(n){ return n.kind || (n.type ? 'equip' : 'note'); }
+function noteTitleOf(n){
+  if(n.title) return n.title;
+  if(kindOf(n) === 'equip') return EQUIP_TYPES[n.type] ? EQUIP_TYPES[n.type].titre : 'Équipement';
+  var first = String(n.text || '').split('\n')[0].trim();
+  if(!first) return 'Sans titre';
+  return first.length > 56 ? first.slice(0, 56) + '…' : first;
+}
+var SVG_CAM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4"/></svg>';
+function buildNoteCard(n){
+  var kind = kindOf(n), et = kind === 'equip' ? EQUIP_TYPES[n.type] : null, fl = et ? equipFieldList(n) : [];
+  var card = document.createElement('div'); card.className = 'card note-card'; card.style.setProperty('--c', usageColor(n.usage) || 'var(--accent)');
+  var tags = (et ? '<span class="note-type">' + esc(et.titre) + ' · ' + fl.length + '/' + et.champs.length + '</span>' : '') + [n.zone, n.usage].filter(Boolean).map(function(t){ return '<span class="tag-mini">' + esc(t) + '</span>'; }).join('');
+  var plates = (n.plates || []).map(function(p){ return '<img src="' + urlFor(p.id, p.blob) + '" alt="Plaque signalétique">'; }).join('');
+  var sketches = (n.sketches || []).map(function(sk){ return '<img src="' + URL.createObjectURL(sk.blob) + '">'; }).join('');
+  card.innerHTML =
+    '<div class="note-head"><span class="note-title">' + esc(noteTitleOf(n)) + '</span><span class="note-time">' + fmtDateTime(n.ts) + '</span></div>' +
+    (tags ? '<div class="note-tags">' + tags + '</div>' : '') +
+    (plates ? '<div class="note-plates">' + plates + '</div>' : '') +
+    (fl.length ? '<dl class="note-fields">' + fl.map(function(f){ return '<dt>' + esc(f[0]) + '</dt><dd>' + esc(f[1]) + '</dd>'; }).join('') + '</dl>' : '') +
+    '<div class="note-text">' + esc(n.text || '') + '</div>' +
+    (sketches ? '<div class="note-sketches">' + sketches + '</div>' : '') +
+    '<div class="card-actions">' +
+      (et ? '<button class="icon-btn dup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Dupliquer</button>' : '') +
+      '<button class="icon-btn edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Modifier</button></div>';
+  (n.voiceNotes || []).forEach(function(vn){
+    var audio = document.createElement('audio'); audio.controls = true; audio.preload = 'metadata'; audio.src = URL.createObjectURL(vn.blob);
+    audio.style.width = '100%'; audio.style.marginTop = '8px'; audio.style.height = '32px';
+    card.insertBefore(audio, card.querySelector('.card-actions'));
+  });
+  card.querySelector('.edit').addEventListener('click', function(){ openEquipEditor(n.id); });
+  if(et) card.querySelector('.dup').addEventListener('click', function(){ duplicateEquip(n); });
+  return card;
+}
+function renderEquip(){
+  var notes = state.equip.filter(function(n){ return kindOf(n) === 'note'; });
+  var equips = state.equip.filter(function(n){ return kindOf(n) === 'equip'; });
+  var wn = document.getElementById('noteList'), we = document.getElementById('equipList');
+  wn.innerHTML = ''; we.innerHTML = '';
+  if(!notes.length) wn.appendChild(emptyState('note', 'Aucune note', 'Écrivez ici en vrac : constats, chiffres, questions, contacts…'));
+  notes.forEach(function(n){ wn.appendChild(buildNoteCard(n)); });
+  if(!equips.length) we.appendChild(emptyState('camera', 'Aucun équipement', 'Photographiez la plaque signalétique d’un équipement pour en relever les informations clés.'));
+  equips.forEach(function(n){ we.appendChild(buildNoteCard(n)); });
+}
+/* Machine identique suivante : même type, mêmes champs, titre incrémenté, sans la plaque (rien n'est enregistré avant « Enregistrer ») */
 function duplicateEquip(src){
   var titles = state.equip.map(function(x){ return x.title; });
   var title = src.title || '';
@@ -1491,134 +2071,341 @@ function duplicateEquip(src){
     var m = /^(.*?)(\d+)\s*$/.exec(title);
     title = m ? m[1] + (+m[2] + 1) : (title ? title + ' 2' : '');
   } while(title && titles.indexOf(title) >= 0);
-  openEquipEditor(null, { id:uid(), visitId:state.currentVisitId, title:title, zone:src.zone, usage:src.usage, type:src.type, fields:Object.assign({}, src.fields||{}), text:'', sketches:[], voiceNotes:[], ts:Date.now() });
+  openEquipEditor(null, { id:uid(), kind:'equip', visitId:state.currentVisitId, title:title, zone:src.zone, usage:src.usage, type:src.type, fields:Object.assign({}, src.fields || {}), text:'', sketches:[], voiceNotes:[], plates:[], ts:Date.now() });
 }
-function openEquipEditor(id, draft){
-  var n = id ? state.equip.find(function(x){return x.id===id;}) : draft || {id:uid(), visitId:state.currentVisitId, title:'', zone:(state.lastZoneUsed||{})[state.currentVisitId]||null, usage:state.lockedUsage[state.currentVisitId]||null, text:'', sketches:[], voiceNotes:[], ts:Date.now()};
-  n.sketches = n.sketches || [];
-  n.voiceNotes = n.voiceNotes || [];
+
+/* ---------- éditeur de note libre / d'équipement ---------- */
+var curEditor = null, plateTarget = null;
+function openEquipEditor(id, draft, opts){
+  opts = opts || {};
+  var n = id ? state.equip.find(function(x){ return x.id === id; }) : draft || { id:uid(), visitId:state.currentVisitId, title:'', zone:(state.lastZoneUsed || {})[state.currentVisitId] || null, usage:state.lockedUsage[state.currentVisitId] || null, type:'', fields:{}, text:'', sketches:[], voiceNotes:[], plates:[], ts:Date.now() };
+  var mode = id ? kindOf(n) : (opts.mode || 'equip');
+  n.kind = mode; n.sketches = n.sketches || []; n.voiceNotes = n.voiceNotes || []; n.plates = n.plates || []; n.fields = n.fields || {};
   n._persisted = !!id;
   usageEdit.on = false; usageEdit.removed = [];
-  // type de fiche et champs : copie de travail, reportée dans la note à l'enregistrement
-  var type = id || draft ? (EQUIP_TYPES[n.type] ? n.type : '') : equipTypeFor(n.usage);
-  var typeTouched = !!(id || draft);
-  var fields = Object.assign({}, n.fields || {});
-  document.getElementById('equipTitle').textContent = id ? 'Modifier la note' : draft ? 'Copie de la fiche' : 'Nouvelle note équipement';
-  document.getElementById('equipName').value = n.title||'';
-  document.getElementById('equipText').value = n.text||'';
-  document.getElementById('deleteEquip').style.display = id ? 'flex' : 'none';
+  var $ = function(i){ return document.getElementById(i); };
+  /* copie de travail : reportée dans la fiche à l'enregistrement. Les champs lus sur la plaque sont en plus écrits tout de suite dans la fiche. */
+  var E = { n:n, mode:mode, type:'', typeTouched:true, fields:Object.assign({}, n.fields), auto:Object.assign({}, n.auto || {}), plateIdx:0, job:0, rows:[] };
+  if(mode === 'equip'){
+    if(EQUIP_TYPES[n.type]) E.type = n.type;
+    else { E.type = equipTypeFor(n.usage) || 'generique'; E.typeTouched = false; }
+  }
+  curEditor = E;
+  $('overlayEquip').dataset.mode = mode;
+  $('equipTitle').textContent = mode === 'note' ? (id ? 'Modifier la note' : 'Nouvelle note') : (id ? 'Équipement' : draft ? 'Copie de la fiche' : 'Nouvel équipement');
+  $('equipNameLabel').textContent = mode === 'note' ? 'Titre (facultatif)' : 'Équipement / repère';
+  $('equipName').value = n.title || '';
+  $('equipText').value = n.text || '';
+  $('equipTextLabel').textContent = mode === 'note' ? 'Note' : 'Observations';
+  $('equipText').placeholder = mode === 'note' ? 'Écrivez ici en vrac : constats, chiffres, questions, contacts…' : 'État, réglages, constats, pistes d’amélioration…';
+  if(mode === 'note') $('equipName').placeholder = 'Ex : Réunion de lancement, Contacts, À vérifier…';
+  $('deleteEquip').style.display = id ? 'flex' : 'none';
   renderSketchStrip(n);
   renderVoiceStrip(n);
-  document.getElementById('btnRecordVoice').classList.remove('recording');
-  document.getElementById('btnRecordVoice').innerHTML = VOICE_BTN_IDLE;
-  document.getElementById('btnRecordVoice').onclick = function(){ toggleVoiceRecording(n); };
+  $('btnRecordVoice').classList.remove('recording');
+  $('btnRecordVoice').innerHTML = VOICE_BTN_IDLE;
+  $('btnRecordVoice').onclick = function(){ toggleVoiceRecording(n); };
 
-  var qf = document.getElementById('equipQuickFields'); qf.innerHTML='';
+  var qf = $('equipQuickFields'); qf.innerHTML = '';
+  qf.style.display = mode === 'note' ? 'flex' : 'none';
   QUICK_FIELDS.forEach(function(f){
-    var c = document.createElement('div'); c.className='field-chip'; c.textContent='+ '+f;
+    var c = document.createElement('div'); c.className = 'field-chip'; c.textContent = '+ ' + f;
     c.addEventListener('click', function(){
-      var ta = document.getElementById('equipText'); var sep = ta.value && !ta.value.endsWith('\n') ? '\n' : '';
+      var ta = $('equipText'); var sep = ta.value && !ta.value.endsWith('\n') ? '\n' : '';
       ta.value += sep + f + ' : '; ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length;
     });
     qf.appendChild(c);
   });
 
-  function anyField(){ return Object.keys(fields).some(function(k){ return String(fields[k]||'').trim(); }); }
+  function anyField(){ return Object.keys(E.fields).some(function(k){ return String(E.fields[k] || '').trim(); }); }
   // l'usage choisi propose le type de fiche, tant que l'auditeur n'en a pas choisi un ni rempli de champ
-  function pickUsage(v){ n.usage=v; if(!typeTouched && !anyField()){ type = equipTypeFor(v); renderTypes(); renderFields(); } draw(); }
+  function pickUsage(v){ n.usage = v; if(mode === 'equip' && !E.typeTouched && !anyField()){ E.type = equipTypeFor(v) || 'generique'; renderTypes(); renderFields(); } draw(); }
   function draw(){
-    renderChipRow(document.getElementById('equipZones'), zoneChoices(n.zone), n.zone, {
-      onSelect:function(v){ n.zone=v; draw(); renderFields(); }, onAdd:function(v){ addZone(v); n.zone=v; draw(); renderFields(); }
+    renderChipRow($('equipZones'), zoneChoices(n.zone), n.zone, {
+      onSelect:function(v){ n.zone = v; draw(); renderFields(); }, onAdd:function(v){ addZone(v); n.zone = v; draw(); renderFields(); }
     });
-    renderUsageRow(document.getElementById('equipUsages'), n.usage, { onSelect:pickUsage, redraw:draw });
+    renderUsageRow($('equipUsages'), n.usage, { onSelect:pickUsage, redraw:draw });
   }
   function renderTypes(){
-    var wrap = document.getElementById('equipTypes'); wrap.innerHTML='';
-    [['','Note libre']].concat(EQUIP_ORDER.map(function(k){ return [k, EQUIP_TYPES[k].titre]; })).forEach(function(x){
-      var c = document.createElement('div'); c.className='chip'+(type===x[0]?' selected':''); c.textContent=x[1];
-      c.addEventListener('click', function(){ type=x[0]; typeTouched=true; renderTypes(); renderFields(); });
+    var wrap = $('equipTypes'); wrap.innerHTML = '';
+    if(mode !== 'equip') return;
+    EQUIP_ORDER.forEach(function(k){
+      var c = document.createElement('div'); c.className = 'chip' + (E.type === k ? ' selected' : ''); c.textContent = EQUIP_TYPES[k].titre;
+      c.addEventListener('click', function(){
+        E.type = k; E.typeTouched = true; renderTypes(); renderFields();
+        if(n.plates.some(function(p){ return p.words; })) analyseAndApply();      // les champs vides du nouveau type profitent de la lecture déjà faite
+      });
       wrap.appendChild(c);
     });
   }
   function updateCount(){
-    var t = EQUIP_TYPES[type];
-    document.getElementById('equipFieldCount').textContent = t ? t.champs.filter(function(c){ return String(fields[c]||'').trim(); }).length+'/'+t.champs.length+' champs' : '';
+    var t = EQUIP_TYPES[E.type];
+    $('equipFieldCount').textContent = mode === 'equip' && t ? t.champs.filter(function(c){ return String(E.fields[c] || '').trim(); }).length + '/' + t.champs.length + ' champs' : '';
   }
   function renderFields(){
-    var wrap = document.getElementById('equipFields'); wrap.innerHTML='';
-    var t = EQUIP_TYPES[type];
-    document.getElementById('equipQuickFields').style.display = t ? 'none' : 'flex';
-    document.getElementById('equipTextLabel').textContent = t ? 'Observations' : 'Caractéristiques / fonctionnement';
-    document.getElementById('equipText').placeholder = t ? 'État, réglages, constats, pistes d’amélioration…' : 'Puissance, régime horaire, état, observations…';
-    document.getElementById('equipName').placeholder = t ? t.titre+' n°'+(state.equip.filter(function(x){ return x.type===type && x.id!==n.id; }).length+1) : 'Ex : Compresseur GA37 n°2';
+    var wrap = $('equipFields'); wrap.innerHTML = '';
+    if(mode !== 'equip'){ updateCount(); return; }
+    var t = EQUIP_TYPES[E.type];
+    $('equipName').placeholder = t ? t.titre + ' n°' + (state.equip.filter(function(x){ return x.type === E.type && x.id !== n.id; }).length + 1) : 'Ex : Compresseur GA37 n°2';
     updateCount();
     if(!t) return;
     t.champs.forEach(function(label, i){
-      var row = document.createElement('div'); row.className='ef-row';
-      var lab = document.createElement('label'); lab.htmlFor='ef_'+i; lab.textContent=label;
-      var inp = document.createElement('input'); inp.type='text'; inp.id='ef_'+i; inp.value=fields[label]||''; inp.autocomplete='off';
-      var mode = fieldInputMode(label); if(mode) inp.setAttribute('inputmode', mode);
-      inp.setAttribute('enterkeyhint', i < t.champs.length-1 ? 'next' : 'done');
+      var row = document.createElement('div'); row.className = 'ef-row';
+      var lab = document.createElement('label'); lab.htmlFor = 'ef_' + i; lab.textContent = label;
+      var badge = document.createElement('span'); badge.className = 'ef-auto'; badge.textContent = 'auto'; badge.title = 'Lu automatiquement sur la plaque'; lab.appendChild(badge);
+      var inp = document.createElement('input'); inp.type = 'text'; inp.id = 'ef_' + i; inp.value = E.fields[label] || ''; inp.autocomplete = 'off';
+      var im = fieldInputMode(label); if(im) inp.setAttribute('inputmode', im);
+      inp.setAttribute('enterkeyhint', i < t.champs.length - 1 ? 'next' : 'done');
       row.appendChild(lab); row.appendChild(inp);
-      var choices = label==='Localisation' ? (n.zone ? [n.zone] : null) : fieldChoices(type, label);
+      var choices = label === 'Localisation' ? (n.zone ? [n.zone] : null) : fieldChoices(E.type, label);
       var cw = null;
       if(choices){
-        cw = document.createElement('div'); cw.className='ef-chips';
+        cw = document.createElement('div'); cw.className = 'ef-chips';
         choices.forEach(function(v){
-          var b = document.createElement('button'); b.type='button'; b.className='ef-chip'; b.textContent=v;
-          b.addEventListener('click', function(){ inp.value = inp.value===v ? '' : v; fields[label]=inp.value; mark(); });
+          var b = document.createElement('button'); b.type = 'button'; b.className = 'ef-chip'; b.textContent = v;
+          b.addEventListener('click', function(){ inp.value = inp.value === v ? '' : v; E.fields[label] = inp.value; mark(); });
           cw.appendChild(b);
         });
         row.appendChild(cw);
       }
       function mark(){
+        var isAuto = !!E.auto[label] && E.auto[label] === inp.value;
         row.classList.toggle('filled', !!inp.value.trim());
-        if(cw) [].forEach.call(cw.children, function(b){ b.classList.toggle('on', b.textContent===inp.value); });
+        row.classList.toggle('auto', isAuto);
+        badge.hidden = !isAuto;
+        if(cw) [].forEach.call(cw.children, function(b){ b.classList.toggle('on', b.textContent === inp.value); });
         updateCount();
       }
-      inp.addEventListener('input', function(){ fields[label]=inp.value; mark(); });
+      inp.addEventListener('input', function(){ E.fields[label] = inp.value; mark(); });
       inp.addEventListener('keydown', function(e){
-        if(e.key!=='Enter') return;
+        if(e.key !== 'Enter') return;
         e.preventDefault();
-        var nx = document.getElementById('ef_'+(i+1)); if(nx) nx.focus(); else inp.blur();
+        var nx = $('ef_' + (i + 1)); if(nx) nx.focus(); else inp.blur();
       });
       mark();
       wrap.appendChild(row);
     });
   }
-  draw(); renderTypes(); renderFields();
 
-  document.getElementById('saveEquip').onclick = function(){
-    n.title = document.getElementById('equipName').value.trim();
-    n.text = document.getElementById('equipText').value.trim();
-    n.type = type;
-    var t = EQUIP_TYPES[type], kept = {};
-    if(t){
-      t.champs.forEach(function(c){ var v = String(fields[c]||'').trim(); if(v) kept[c] = v; });
-      if(!kept['Localisation'] && n.zone && t.champs.indexOf('Localisation')>=0) kept['Localisation'] = n.zone;
-      if(!n.title) n.title = document.getElementById('equipName').placeholder;
+  /* ----- plaques : photo, lecture automatique, report dans les champs ----- */
+  function setStatus(kind, msg, pct){
+    E.status = { kind:kind, msg:msg, pct:pct };
+    if(curEditor !== E || mode !== 'equip') return;
+    var el = $('plateStatus'), bar = $('plateBar');
+    el.className = 'plate-status ' + kind;
+    el.innerHTML = msg ? '<span class="ps-dot"></span><span>' + esc(msg) + '</span>' : '';
+    bar.hidden = kind !== 'busy';
+    bar.firstElementChild.style.width = Math.round((pct || 0) * 100) + '%';
+  }
+  function renderPlates(){
+    if(curEditor !== E || mode !== 'equip') return;
+    var view = $('plateView'), thumbs = $('plateThumbs'), plates = n.plates;
+    view.innerHTML = ''; thumbs.innerHTML = '';
+    $('btnPlateAdd').hidden = !plates.length; $('btnPlateRead').hidden = !plates.length;
+    view.classList.toggle('empty', !plates.length);
+    if(!plates.length){
+      view.style.background = 'transparent'; view.style.border = 'none';
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'plate-empty';
+      b.innerHTML = SVG_CAM + '<b>Photographier la plaque signalétique</b><span>De près, à plat, bien éclairée</span>';
+      b.addEventListener('click', function(){ plateTarget = E; $('plateInput').click(); });
+      view.appendChild(b);
+      return;
     }
-    n.fields = kept;
+    view.style.background = ''; view.style.border = '';
+    E.plateIdx = Math.max(0, Math.min(E.plateIdx, plates.length - 1));
+    var cur = plates[E.plateIdx];
+    var img = document.createElement('img'); img.src = urlFor(cur.id, cur.blob); img.alt = 'Plaque signalétique';
+    img.addEventListener('click', function(){ openPlateZoom(cur); });
+    view.appendChild(img);
+    var del = document.createElement('button'); del.type = 'button'; del.className = 'plate-del'; del.setAttribute('aria-label', 'Supprimer cette photo');
+    del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+    del.addEventListener('click', function(){
+      if(!confirm('Supprimer cette photo de plaque ?')) return;
+      plates.splice(E.plateIdx, 1); E.plateIdx = 0;
+      if(n._persisted) putRec('equip', n);
+      renderPlates(); renderRows();
+      if(!plates.length) setStatus('idle', 'Aucune plaque photographiée pour cet équipement.');
+    });
+    view.appendChild(del);
+    if(plates.length > 1) plates.forEach(function(p, i){
+      var t = document.createElement('button'); t.type = 'button'; t.className = 'plate-thumb' + (i === E.plateIdx ? ' on' : '');
+      t.innerHTML = '<img src="' + urlFor(p.id, p.blob) + '" alt="Plaque ' + (i + 1) + '">';
+      t.addEventListener('click', function(){ E.plateIdx = i; renderPlates(); });
+      thumbs.appendChild(t);
+    });
+  }
+  function renderRows(){
+    var box = $('plateTextBox');
+    box.hidden = !E.rows.length;
+    $('plateText').textContent = E.rows.join('\n');
+  }
+  /* un équipement n'est enregistré qu'avec « Enregistrer », sauf s'il porte une photo : celle-ci ne doit jamais être perdue */
+  function collect(forSave){
+    n.title = $('equipName').value.trim();
+    n.text = $('equipText').value.trim();
+    n.kind = mode;
+    if(mode === 'equip'){
+      n.type = E.type;
+      var t = EQUIP_TYPES[E.type], kept = {};
+      if(t){
+        t.champs.forEach(function(c){ var v = String(E.fields[c] || '').trim(); if(v) kept[c] = v; });
+        if(!kept['Localisation'] && n.zone && t.champs.indexOf('Localisation') >= 0) kept['Localisation'] = n.zone;
+        if(forSave && !n.title) n.title = $('equipName').placeholder;
+      }
+      n.fields = kept;
+      var auto = {}; Object.keys(E.auto).forEach(function(k){ if(kept[k] === E.auto[k]) auto[k] = E.auto[k]; });
+      n.auto = auto;
+    } else { n.type = ''; n.fields = {}; delete n.auto; }
+  }
+  function ensureStored(){
+    if(n._persisted) return putRec('equip', n);
+    collect(false);
+    return putRec('equip', n).then(function(){
+      n._persisted = true;
+      if(!state.equip.find(function(x){ return x.id === n.id; })) state.equip.unshift(n);
+      renderEquip(); renderHome();
+    });
+  }
+  function addPlate(blob){
+    n.plates.push({ id:uid(), blob:blob, driveSynced:false });
+    E.plateIdx = n.plates.length - 1;
+    renderPlates();
+    ensureStored().then(function(){ readPlates(false); });
+  }
+  E.addPlate = addPlate;
+  function applyAnalysis(a){
+    var res = { filled:0, typeChanged:false };
+    if(!E.typeTouched && !anyField() && a.type && EQUIP_TYPES[a.type] && a.type !== E.type){ E.type = a.type; res.typeChanged = true; }
+    var t = EQUIP_TYPES[E.type]; if(!t) return res;
+    var vals = PlateParse.fieldsFor(a, E.type, t.champs);
+    Object.keys(vals).forEach(function(label){
+      if(String(E.fields[label] || '').trim()) return;           // on n'écrase jamais ce que l'auditeur a saisi
+      E.fields[label] = vals[label]; E.auto[label] = vals[label]; res.filled++;
+    });
+    return res;
+  }
+  function analyseAndApply(){
+    var list = n.plates.filter(function(p){ return p.words && p.words.length; }).map(function(p){ return PlateParse.analyse(wordsToObjs(p.words)); });
+    E.rows = []; list.forEach(function(a, i){ if(list.length > 1) E.rows.push('— photo ' + (i + 1) + ' —'); E.rows = E.rows.concat(a.rows); });
+    if(PlateParse.conflicts(list)){                                            // plaques de deux machines différentes : on ne mélange rien
+      if(curEditor === E){ renderRows(); setStatus('warn', 'Les photos ne donnent pas la même marque ou le même modèle : elles montrent sans doute des équipements différents. Rien n’a été rempli à partir de la dernière photo — une fiche par équipement, ou saisissez à la main.'); }
+      return;
+    }
+    var a = PlateParse.merge(list), res = a ? applyAnalysis(a) : { filled:0, typeChanged:false };
+    // reportée tout de suite dans la fiche (même si l'éditeur est fermé ou si on ne l'enregistre pas)
+    if(res.filled || res.typeChanged || !EQUIP_TYPES[n.type]){
+      if(res.typeChanged || !EQUIP_TYPES[n.type]) n.type = E.type;
+      Object.keys(E.auto).forEach(function(k){ if(E.fields[k] === E.auto[k] && !String(n.fields[k] || '').trim()){ n.fields[k] = E.fields[k]; n.auto = n.auto || {}; n.auto[k] = E.auto[k]; } });
+      if(n._persisted) putRec('equip', n);
+      renderEquip();
+    }
+    if(curEditor !== E) return;
+    if(res.filled || res.typeChanged){ renderTypes(); renderFields(); }       // pas de reconstruction inutile pendant que l'auditeur tape
+    renderRows();
+    var nAuto = autoCount();
+    if(!list.length) setStatus('fail', 'Plaque non lue. Touchez « Relire la plaque » (connexion nécessaire la première fois).');
+    else if(nAuto) setStatus('ok', nAuto + ' champ' + (nAuto > 1 ? 's' : '') + ' lu' + (nAuto > 1 ? 's' : '') + ' automatiquement (en bleu) : vérifiez-' + (nAuto > 1 ? 'les' : 'le') + ' avec la photo.' + (res.typeChanged ? ' Type de fiche proposé : ' + EQUIP_TYPES[E.type].titre + '.' : ''));
+    else setStatus('none', 'Rien de sûr n’a pu être lu sur la plaque : remplissez les champs à la main.');
+  }
+  function autoCount(){
+    var t = EQUIP_TYPES[E.type]; if(!t) return 0;
+    return t.champs.filter(function(c){ return E.auto[c] && E.auto[c] === E.fields[c]; }).length;
+  }
+  function readPlates(force){
+    var todo = n.plates.filter(function(p){ return force || !p.words; });
+    if(!todo.length){ analyseAndApply(); return; }
+    var job = ++E.job;
+    setStatus('busy', 'Préparation de la lecture…', 0.02);
+    var chain = Promise.resolve();
+    todo.forEach(function(p){
+      chain = chain.then(function(){
+        return ocrRecognize(p.blob, function(s){ if(E.job === job) setStatus('busy', s.msg, s.pct); }).then(function(words){ p.words = words; });
+      });
+    });
+    chain.then(function(){ return n._persisted ? putRec('equip', n) : null; }).then(function(){ if(E.job === job) analyseAndApply(); }).catch(function(err){
+      if(E.job !== job) return;
+      setStatus('fail', 'Lecture automatique impossible pour l’instant (connexion requise la première fois). La photo est enregistrée : touchez « Relire la plaque » plus tard.');
+      console.error(err);
+    });
+  }
+  $('btnPlateAdd').onclick = function(){ plateTarget = E; $('plateInput').click(); };
+  $('btnPlateRead').onclick = function(){ readPlates(true); };
+
+  draw(); renderTypes(); renderFields();
+  if(mode === 'equip'){
+    renderPlates(); renderRows();
+    if(!n.plates.length) setStatus('idle', '');
+    else {
+      var rowsOf = n.plates.filter(function(p){ return p.words; }).map(function(p){ return PlateParse.analyse(wordsToObjs(p.words)).rows; });
+      rowsOf.forEach(function(r, i){ if(rowsOf.length > 1) E.rows.push('— photo ' + (i + 1) + ' —'); E.rows = E.rows.concat(r); });
+      renderRows();
+      var nAuto = autoCount();
+      if(!rowsOf.length) setStatus('fail', 'Plaque non lue. Touchez « Relire la plaque » (connexion nécessaire la première fois).');
+      else if(nAuto) setStatus('ok', nAuto + ' champ' + (nAuto > 1 ? 's' : '') + ' lu' + (nAuto > 1 ? 's' : '') + ' automatiquement (en bleu) : vérifiez-' + (nAuto > 1 ? 'les' : 'le') + ' avec la photo.');
+      else setStatus('none', 'Rien de sûr n’a pu être lu sur la plaque : remplissez les champs à la main.');
+    }
+    if(opts.fresh) readPlates(false);
+  }
+
+  $('saveEquip').onclick = function(){
+    collect(true);
     putRec('equip', n).then(function(){
-      if(!state.equip.find(function(x){return x.id===n.id;})) state.equip.unshift(n);
-      closeOverlay('overlayEquip'); renderEquip(); renderHome(); toast('Note enregistrée ✓');
+      n._persisted = true;
+      if(!state.equip.find(function(x){ return x.id === n.id; })) state.equip.unshift(n);
+      closeEquipEditor(); renderEquip(); renderHome(); toast(mode === 'note' ? 'Note enregistrée ✓' : 'Équipement enregistré ✓');
     });
   };
-  document.getElementById('deleteEquip').onclick = function(){
-    if(!confirm('Supprimer cette note ?')) return;
+  $('deleteEquip').onclick = function(){
+    if(!confirm(mode === 'note' ? 'Supprimer cette note ?' : 'Supprimer cet équipement et ses photos de plaque ?')) return;
     delRec('equip', n.id).then(function(){
-      state.equip = state.equip.filter(function(x){return x.id!==n.id;});
-      closeOverlay('overlayEquip'); renderEquip(); renderHome(); toast('Note supprimée');
+      state.equip = state.equip.filter(function(x){ return x.id !== n.id; });
+      closeEquipEditor(); renderEquip(); renderHome(); toast(mode === 'note' ? 'Note supprimée' : 'Équipement supprimé');
     });
   };
   document.querySelector('#overlayEquip .overlay-body').scrollTop = 0; // la fiche précédente a pu laisser le formulaire défilé
   openOverlay('overlayEquip');
 }
-document.getElementById('closeEquip').addEventListener('click', function(){
-  if(voiceRecorder && voiceRecorder.state==='recording'){ voiceRecorder.stop(); }
+function closeEquipEditor(){
+  if(voiceRecorder && voiceRecorder.state === 'recording'){ voiceRecorder.stop(); }
   closeOverlay('overlayEquip');
+  curEditor = null;
+}
+document.getElementById('closeEquip').addEventListener('click', closeEquipEditor);
+document.getElementById('btnNewNote').addEventListener('click', function(){ openEquipEditor(null, null, { mode:'note' }); });
+document.getElementById('btnNewEquip').addEventListener('click', function(){ openEquipEditor(null, null, { mode:'equip' }); });
+
+/* ---------- photo de plaque : nouvel équipement (ou autre photo pour l'équipement ouvert) ---------- */
+document.getElementById('btnNewPlate').addEventListener('click', function(){
+  if(!state.currentVisitId){ openVisitSheet(); return; }
+  plateTarget = null; document.getElementById('plateInput').click();
 });
-document.getElementById('btnNewEquip').addEventListener('click', function(){ openEquipEditor(null); });
+document.getElementById('plateInput').addEventListener('change', function(e){
+  var file = e.target.files[0]; e.target.value = '';
+  if(!file) return;
+  var target = plateTarget; plateTarget = null;
+  compressPlate(file).then(function(blob){
+    if(target && curEditor === target && target.addPlate) target.addPlate(blob);
+    else startPlateEquipment(blob);
+  }).catch(function(){ toast('Photo illisible, réessayez'); });
+});
+function startPlateEquipment(blob){
+  var n = { id:uid(), kind:'equip', visitId:state.currentVisitId, title:'', zone:(state.lastZoneUsed || {})[state.currentVisitId] || null, usage:state.lockedUsage[state.currentVisitId] || null,
+            type:'', fields:{}, text:'', sketches:[], voiceNotes:[], plates:[{ id:uid(), blob:blob, driveSynced:false }], ts:Date.now() };
+  putRec('equip', n).then(function(){
+    state.equip.unshift(n); renderEquip(); renderHome();
+    openEquipEditor(n.id, null, { fresh:true });
+  });
+}
+/* ---------- plaque en grand : toucher pour agrandir / réduire, faire défiler pour lire ---------- */
+function openPlateZoom(p){
+  var img = document.getElementById('plateZoomImg'); img.className = ''; img.src = urlFor(p.id, p.blob);
+  document.getElementById('plateZoom').scrollTo(0, 0);
+  openOverlay('overlayPlate');
+}
+document.getElementById('plateZoomImg').addEventListener('click', function(){
+  this.className = this.className === '' ? 'z2' : this.className === 'z2' ? 'z3' : '';
+});
+document.getElementById('closePlate').addEventListener('click', function(){ closeOverlay('overlayPlate'); });
 
 /* ---------- NOTES: pense-bête ---------- */
 function renderTodos(){
@@ -1660,15 +2447,15 @@ document.querySelectorAll('.segmented button').forEach(function(btn){
 });
 function setSegment(seg){
   document.querySelectorAll('.segmented button').forEach(function(b){ b.classList.toggle('active', b.dataset.seg===seg); });
-  document.getElementById('seg-equip').style.display = seg==='equip' ? 'block':'none';
-  document.getElementById('seg-todo').style.display = seg==='todo' ? 'block':'none';
+  ['notes','equip','todo'].forEach(function(s){ document.getElementById('seg-'+s).style.display = seg===s ? 'block':'none'; });
 }
 
 /* ---------- tabs / navigation ---------- */
 function setTab(name, segTarget){
   document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
   document.getElementById('view-'+name).classList.add('active');
-  document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.dataset.tab===name && (!segTarget || t.dataset.segTarget===segTarget)); });
+  var tabSeg = name==='notes' && segTarget ? (segTarget==='todo' ? 'todo' : 'notes') : segTarget;   // « Équipements » dépend de l'onglet Notes
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.dataset.tab===name && (!tabSeg || t.dataset.segTarget===tabSeg)); });
   if(name==='notes' && segTarget) setSegment(segTarget);
   if(name==='report') renderReport();
   window.scrollTo(0,0);
@@ -1679,7 +2466,7 @@ document.querySelectorAll('.tab').forEach(function(tab){
 document.querySelectorAll('[data-jump]').forEach(function(el){
   el.addEventListener('click', function(){
     var j = el.dataset.jump;
-    if(j==='home') setTab('home'); else if(j==='notes') setTab('notes','equip'); else if(j==='todo') setTab('notes','todo');
+    if(j==='home') setTab('home'); else if(j==='notes') setTab('notes','notes'); else if(j==='equip') setTab('notes','equip'); else if(j==='todo') setTab('notes','todo');
   });
 });
 
@@ -1760,7 +2547,8 @@ function renderReport(){
   document.getElementById('repSite').textContent = v ? v.site : 'Aucune visite';
   document.getElementById('repSummary').textContent = v ? (fmtDate(v.date) + (v.auditeur? ' · Auditeur : '+v.auditeur : '')) : 'Créez une visite pour commencer.';
   document.getElementById('repPhotos').textContent = state.photos.length;
-  document.getElementById('repNotes').textContent = state.equip.length;
+  document.getElementById('repNotes').textContent = state.equip.filter(function(n){ return kindOf(n) === 'note'; }).length;
+  document.getElementById('repEquip').textContent = state.equip.filter(function(n){ return kindOf(n) === 'equip'; }).length;
   var done = state.todos.filter(function(t){return t.done;}).length;
   document.getElementById('repTodoDone').textContent = done+'/'+state.todos.length;
   var tile = document.getElementById('repTodoDone').closest('.stat-tile');
@@ -1779,11 +2567,15 @@ function buildReportHtml(){
   var voiceJobs = [];
   state.equip.forEach(function(n){ (n.voiceNotes||[]).forEach(function(vn){ voiceJobs.push(blobToDataURL(vn.blob).then(function(url){ return {kind:'voice', noteId:n.id, url:url, mime:vn.blob.type}; })); }); });
 
-  return Promise.all(photoJobs.concat(sketchJobs).concat(voiceJobs)).then(function(all){
-    var byId = {}, sketchById = {}, voiceById = {};
+  var plateJobs = [];
+  state.equip.forEach(function(n){ (n.plates||[]).forEach(function(p){ plateJobs.push(blobToDataURL(p.blob).then(function(url){ return {kind:'plate', noteId:n.id, url:url}; })); }); });
+
+  return Promise.all(photoJobs.concat(sketchJobs).concat(voiceJobs).concat(plateJobs)).then(function(all){
+    var byId = {}, sketchById = {}, voiceById = {}, plateById = {};
     all.forEach(function(x){
       if(x.kind==='photo') byId[x.id]=x.url;
       else if(x.kind==='sketch') (sketchById[x.noteId]=sketchById[x.noteId]||[]).push(x.url);
+      else if(x.kind==='plate') (plateById[x.noteId]=plateById[x.noteId]||[]).push(x.url);
       else (voiceById[x.noteId]=voiceById[x.noteId]||[]).push(x);
     });
     var zoneSections = Object.keys(zones).sort().map(function(z){
@@ -1798,21 +2590,26 @@ function buildReportHtml(){
       }).join('');
       return '<section class="zone-sec"><h2>'+esc(z)+'</h2><div class="p-grid">'+cards+'</div></section>';
     }).join('');
-    var equipRows = state.equip.map(function(n){
+    function noteCardHtml(n){
       var sketchImgs = (sketchById[n.id]||[]).map(function(u, i){ return '<img src="'+u+'" alt="Schéma '+(i+1)+'" tabindex="0" data-zoom="1">'; }).join('');
+      var plateImgs = (plateById[n.id]||[]).map(function(u, i){ return '<img src="'+u+'" alt="Plaque signalétique '+(i+1)+'" tabindex="0" data-zoom="1">'; }).join('');
       var voiceEls = (voiceById[n.id]||[]).map(function(x){ return '<audio controls src="'+x.url+'"></audio>'; }).join('');
       // fiche structurée : type (data-t) et champs (table.n-fields), relus tels quels par Studio Rapport ; data-id évite les doublons d'un import à l'autre
       var et = EQUIP_TYPES[n.type], fl = equipFieldList(n);
       return '<div class="n-card" data-id="'+escAttr(n.id)+'" data-z="'+escAttr(n.zone||'Sans zone')+'" data-u="'+escAttr(n.usage||'Sans usage')+'" data-c="'+(usageColor(n.usage)||'#8993A1')+'"'+(et? ' data-t="'+n.type+'"':'')+'>'+
-        '<div class="n-head"><b>'+esc(n.title||'Sans titre')+'</b><span>'+fmtDateTime(n.ts)+'</span></div>'+
+        '<div class="n-head"><b>'+esc(noteTitleOf(n))+'</b><span>'+fmtDateTime(n.ts)+'</span></div>'+
         '<div class="n-tags">'+[n.zone,n.usage].filter(Boolean).map(function(t){return '<span>'+esc(t)+'</span>';}).join('')+'</div>'+
         (et? '<div class="n-type">'+esc(et.titre)+'</div>':'')+
+        (plateImgs? '<div class="n-plates">'+plateImgs+'</div>':'')+
         (fl.length? '<table class="n-fields">'+fl.map(function(f){ return '<tr><th>'+esc(f[0])+'</th><td>'+esc(f[1])+'</td></tr>'; }).join('')+'</table>':'')+
         '<div class="n-text">'+esc(n.text||'')+'</div>'+
         (sketchImgs? '<div class="n-sketches">'+sketchImgs+'</div>':'')+
         (voiceEls? '<div class="n-voices">'+voiceEls+'</div>':'')+
         '</div>';
-    }).join('') || '<p class="muted">Aucune note équipement.</p>';
+    }
+    var equipRows = state.equip.filter(function(n){ return kindOf(n)==='equip'; }).map(noteCardHtml).join('') || '<p class="muted">Aucune note équipement.</p>';
+    var noteRows = state.equip.filter(function(n){ return kindOf(n)==='note'; }).map(noteCardHtml).join('') || '<p class="muted">Aucune note.</p>';
+    var nbNotes = state.equip.filter(function(n){ return kindOf(n)==='note'; }).length, nbEquip = state.equip.length - nbNotes;
     var todoRows = state.todos.map(function(t){
       return '<tr><td>'+(t.done?'✓':'—')+'</td><td'+(t.done?' class="done"':'')+'>'+esc(t.text)+'</td><td>'+fmtDateTime(t.ts)+'</td></tr>';
     }).join('') || '<tr><td colspan="3" class="muted">Aucun pense-bête.</td></tr>';
@@ -1847,6 +2644,8 @@ function buildReportHtml(){
     'table.n-fields{width:auto;min-width:55%;margin-top:8px;border:none;border-radius:0;background:transparent;}'+
     '.n-fields th{text-align:left;font-weight:500;color:#5B6472;padding:4px 16px 4px 0;font-size:12.5px;border-bottom:1px solid #EDF1F5;white-space:nowrap;vertical-align:top;}'+
     '.n-fields td{padding:4px 0;font-size:13px;font-weight:600;border-bottom:1px solid #EDF1F5;}'+
+    '.n-plates{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}'+
+    '.n-plates img{width:180px;height:135px;object-fit:cover;border:1px solid #DCE2E9;border-radius:8px;background:#0E1218;}'+
     '.n-sketches{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}'+
     '.n-sketches img{width:140px;height:105px;object-fit:contain;border:1px solid #DCE2E9;border-radius:8px;background:#fff;}'+
     '.n-voices{margin-top:10px;}'+
@@ -1893,14 +2692,16 @@ function buildReportHtml(){
     '@media print{.filters,.lb{display:none!important;}}'+
     '</style></head><body><div class="wrap">'+
     '<header><h1>Carnet d’audit — '+esc(v.site)+'</h1><p>'+fmtDate(v.date)+(v.auditeur?' · Auditeur : '+esc(v.auditeur):'')+'</p></header>'+
-    '<div class="stats"><div class="stat"><b>'+state.photos.length+'</b><span>Photos</span></div><div class="stat"><b>'+state.equip.length+'</b><span>Notes</span></div><div class="stat"><b>'+doneCount+'/'+state.todos.length+'</b><span>Pense-bête</span></div></div>'+
+    '<div class="stats"><div class="stat"><b>'+state.photos.length+'</b><span>Photos</span></div><div class="stat"><b>'+nbNotes+'</b><span>Notes</span></div><div class="stat"><b>'+nbEquip+'</b><span>Équipements</span></div><div class="stat"><b>'+doneCount+'/'+state.todos.length+'</b><span>Pense-bête</span></div></div>'+
     '<div class="filters" id="filters" hidden>'+
       '<div class="f-row" id="fZones" hidden><span class="f-label">Zone</span><div class="f-chips"></div></div>'+
       '<div class="f-row" id="fUsages" hidden><span class="f-label">Usage</span><div class="f-chips"></div></div>'+
       '<div class="f-foot"><span id="fCount"></span><button type="button" id="fReset" hidden>Réinitialiser les filtres</button></div>'+
     '</div>'+
     '<section><h2>Photos</h2>'+(zoneSections||'<p class="muted">Aucune photo.</p>')+'<p class="muted" id="noPhotosF" hidden>Aucune photo ne correspond aux filtres.</p></section>'+
-    '<section><h2>Notes équipement</h2>'+equipRows+'<p class="muted" id="noNotesF" hidden>Aucune note ne correspond aux filtres.</p></section>'+
+    '<section class="n-sec"><h2>Notes équipement</h2>'+equipRows+'</section>'+
+    '<section class="n-sec"><h2>Notes</h2>'+noteRows+'</section>'+
+    '<p class="muted" id="noNotesF" hidden>Aucune note ne correspond aux filtres.</p>'+
     '<section><h2>Pense-bête</h2><table>'+todoRows+'</table></section>'+
     '<footer>Généré avec Carnet d’Audit — '+fmtDateTime(Date.now())+'</footer>'+
     '</div>'+
@@ -1978,6 +2779,9 @@ function reportClientScript(){
     });
     [].forEach.call(document.querySelectorAll('.zone-sec'), function(sec){
       sec.classList.toggle('hide', !sec.querySelector('.p-card:not(.hide)'));
+    });
+    [].forEach.call(document.querySelectorAll('.n-sec'), function(sec){
+      sec.classList.toggle('hide', !!sec.querySelector('.n-card') && !sec.querySelector('.n-card:not(.hide)'));
     });
     noP.hidden = !(totalP > 0 && shownP === 0);
     noN.hidden = !(totalN > 0 && shownN === 0);
@@ -2074,11 +2878,15 @@ function buildWorkbook(){
     return { 'N°': i+1, 'Zone': ph.zone||'', 'Usage': ph.usage||'', 'Commentaire': ph.comment||'', 'Date': new Date(ph.ts).toLocaleDateString('fr-FR'), 'Heure': fmtTime(ph.ts) };
   });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(photoRows.length?photoRows:[{'N°':'','Zone':'','Usage':'','Commentaire':'','Date':'','Heure':''}]), 'Photos');
-  var equipRows = state.equip.slice().reverse().map(function(n){
+  var equipRows = state.equip.slice().reverse().filter(function(n){ return kindOf(n)==='equip'; }).map(function(n){
     var et = EQUIP_TYPES[n.type];
-    return { 'Équipement': n.title||'', 'Type': et? et.titre:'', 'Zone': n.zone||'', 'Usage': n.usage||'', 'Caractéristiques': equipFieldList(n).map(function(f){ return f[0]+' : '+f[1]; }).join('\n'), 'Note': n.text||'', 'Schémas': (n.sketches||[]).length, 'Notes vocales': (n.voiceNotes||[]).length, 'Date': new Date(n.ts).toLocaleDateString('fr-FR') };
+    return { 'Équipement': noteTitleOf(n), 'Type': et? et.titre:'', 'Zone': n.zone||'', 'Usage': n.usage||'', 'Caractéristiques': equipFieldList(n).map(function(f){ return f[0]+' : '+f[1]; }).join('\n'), 'Note': n.text||'', 'Schémas': (n.sketches||[]).length, 'Notes vocales': (n.voiceNotes||[]).length, 'Date': new Date(n.ts).toLocaleDateString('fr-FR'), 'Plaques': (n.plates||[]).length };
   });
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(equipRows.length?equipRows:[{'Équipement':'','Type':'','Zone':'','Usage':'','Caractéristiques':'','Note':'','Schémas':'','Notes vocales':'','Date':''}]), 'Notes equipement');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(equipRows.length?equipRows:[{'Équipement':'','Type':'','Zone':'','Usage':'','Caractéristiques':'','Note':'','Schémas':'','Notes vocales':'','Date':'','Plaques':''}]), 'Notes equipement');
+  var freeRows = state.equip.slice().reverse().filter(function(n){ return kindOf(n)==='note'; }).map(function(n){
+    return { 'Titre': noteTitleOf(n), 'Zone': n.zone||'', 'Usage': n.usage||'', 'Note': n.text||'', 'Schémas': (n.sketches||[]).length, 'Notes vocales': (n.voiceNotes||[]).length, 'Date': new Date(n.ts).toLocaleDateString('fr-FR') };
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(freeRows.length?freeRows:[{'Titre':'','Zone':'','Usage':'','Note':'','Schémas':'','Notes vocales':'','Date':''}]), 'Notes');
   var todoRows = state.todos.slice().reverse().map(function(t){
     return { 'Action': t.text, 'Fait': t.done? 'Oui':'Non', 'Date': new Date(t.ts).toLocaleDateString('fr-FR') };
   });
@@ -2206,6 +3014,13 @@ function driveUsageFolderId(v, usage, visitFolderId){
     return putRec('visits', v).then(function(){ return id; });
   });
 }
+function drivePlatesFolderId(v, visitFolderId){
+  return driveEnsureFolder(v.drivePlatesFolderId, 'Plaques signalétiques', visitFolderId).then(function(id){
+    if(id === v.drivePlatesFolderId) return id;
+    v.drivePlatesFolderId = id;
+    return putRec('visits', v).then(function(){ return id; });
+  });
+}
 function driveUploadCreate(name, blob, mimeType, parentId){
   var metadata = {name:name, parents:[parentId]};
   var boundary = 'carnetaudit_' + Math.random().toString(16).slice(2);
@@ -2269,12 +3084,13 @@ function syncVisitToDrive(){
   }).then(function(fid){
     folderId = fid;
     var toPhotos = state.photos.filter(function(p){ return !p.driveSynced; });
-    var toSketches = [], toVoices = [];
+    var toSketches = [], toVoices = [], toPlates = [];
     state.equip.forEach(function(n){
       (n.sketches||[]).forEach(function(sk, idx){ if(!sk.driveSynced) toSketches.push({note:n, sk:sk, idx:idx}); });
       (n.voiceNotes||[]).forEach(function(vn, idx){ if(!vn.driveSynced) toVoices.push({note:n, vn:vn, idx:idx}); });
+      (n.plates||[]).forEach(function(p, idx){ if(!p.driveSynced) toPlates.push({note:n, p:p, idx:idx}); });
     });
-    var total = toPhotos.length + toSketches.length + toVoices.length, done = 0;
+    var total = toPhotos.length + toSketches.length + toVoices.length + toPlates.length, done = 0;
     function step(label){ done++; driveProgress(label+' ('+done+'/'+total+')'); }
     var chain = Promise.resolve();
     toPhotos.forEach(function(ph, i){
@@ -2283,6 +3099,14 @@ function syncVisitToDrive(){
       }).then(function(usageFolderId){
         var name = String(i+1).padStart(3,'0')+'_'+slug(ph.zone||'zone')+'_'+fmtTime(ph.ts).replace(':','h')+'.jpg';
         return driveUploadCreate(name, ph.blob, 'image/jpeg', usageFolderId).then(function(){ ph.driveSynced = true; return putRec('photos', ph); }).then(function(){ step('Photos'); });
+      });
+    });
+    toPlates.forEach(function(item){
+      chain = chain.then(function(){
+        return drivePlatesFolderId(v, folderId);
+      }).then(function(platesFolderId){
+        var name = 'plaque_'+slug(noteTitleOf(item.note))+'_'+(item.idx+1)+'_'+String(item.p.id).slice(0,4)+'.jpg';
+        return driveUploadCreate(name, item.p.blob, 'image/jpeg', platesFolderId).then(function(){ item.p.driveSynced = true; return putRec('equip', item.note); }).then(function(){ step('Plaques'); });
       });
     });
     toSketches.forEach(function(item){
